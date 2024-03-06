@@ -49,24 +49,15 @@ void init(CAN_HandleTypeDef* hcan_ptr) {
 }
 
 void main_loop() {
+
 	process_sensors();
 	process_inverter();
 	update_outputs();
 	update_cooling();
 	update_display_fault_status();
 	update_gcan_states(); // Should be after process_sensors
+	LED_task();
 
-	// TODO this needs to move to the LED control function
-	static U32 last_led = 0;
-	if(HAL_GetTick() - last_led >= HBEAT_LED_DELAY_TIME_ms) {
-		HAL_GPIO_TogglePin(MCU_STATUS_LED_GPIO_Port, MCU_STATUS_LED_Pin);
-		last_led = HAL_GetTick();
-	}
-
-	// Turn off RGB
- 	HAL_GPIO_WritePin(STATUS_R_GPIO_Port, STATUS_R_Pin, SET);
-//	HAL_GPIO_WritePin(STATUS_G_GPIO_Port, STATUS_G_Pin, SET);
-	HAL_GPIO_WritePin(STATUS_B_GPIO_Port, STATUS_B_Pin, SET);
 }
 
 /**
@@ -443,6 +434,18 @@ void update_outputs() {
 	return;
 }
 
+void LED_task(){
+	static U32 last_led = 0;
+	if(HAL_GetTick() - last_led >= HBEAT_LED_DELAY_TIME_ms) {
+		HAL_GPIO_TogglePin(MCU_STATUS_LED_GPIO_Port, MCU_STATUS_LED_Pin);
+		last_led = HAL_GetTick();
+	}
+
+	// Turn off RGB
+	HAL_GPIO_WritePin(STATUS_R_GPIO_Port, STATUS_R_Pin, SET);
+	HAL_GPIO_WritePin(STATUS_G_GPIO_Port, STATUS_G_Pin, SET);
+	HAL_GPIO_WritePin(STATUS_B_GPIO_Port, STATUS_B_Pin, SET);
+}
 
 void pass_on_timer_info(TIM_HandleTypeDef* timer_address, U32 channel1, U32 channel2){
 	PWM_Timer = timer_address;
@@ -455,10 +458,10 @@ void set_DRS_Servo_Position(){
 	                            DRS_POS_5, DRS_POS_6, DRS_POS_7, DRS_POS_8, DRS_POS_9,
 	                            DRS_POS_10, DRS_POS_11, DRS_POS_12, DRS_POS_13,
 	                            DRS_POS_14, DRS_POS_15};
-	static int rot_dial = ROT_DIAL_POS;
+    int rot_dial = ROT_DIAL_POS; //change macro to actual g-can variable
 	rot_dial = DRS_POS_LUT[rot_dial];
 
-    if (DRS_BUTTON_STATE == 1){
+    if (DRS_BUTTON_STATE == 1){ //change macro to actual g-can variable
     	__HAL_TIM_SET_COMPARE(PWM_Timer, DRS_Channel, rot_dial);
     	HAL_TIM_PWM_Start(PWM_Timer, DRS_Channel);
     }

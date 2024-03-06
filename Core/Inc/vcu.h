@@ -181,5 +181,7 @@ void update_outputs();     // Updates brake light and buzzer
 void update_cooling();     // Controls/updates the cooling system
 void update_display_fault_status(); 	// Check all vehicle fault messages and sends best one to display
 void limit_motor_torque();
+void LED_task();
 void pass_on_timer_info(); //this is def not the best way to do this
+void set_DRS_Servo_Position();
 #endif /* INC_VCU_H_ */
