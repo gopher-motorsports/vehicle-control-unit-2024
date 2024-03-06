@@ -120,6 +120,27 @@
 // for redundancy in the correlation  check mandated by rules
 // ============================================================
 
+// ======================================= DRS PARAMETERS ======================================
+#define DRS_POS_0 100
+#define DRS_POS_1 200
+#define DRS_POS_2 300
+#define DRS_POS_3 400
+#define DRS_POS_4 500
+#define DRS_POS_5 600
+#define DRS_POS_6 700
+#define DRS_POS_7 800
+#define DRS_POS_8 900
+#define DRS_POS_9 1000
+#define DRS_POS_10 1100
+#define DRS_POS_11 1200
+#define DRS_POS_12 1300
+#define DRS_POS_13 1400
+#define DRS_POS_14 1500
+#define DRS_POS_15 1600
+
+#define DRS_BUTTON_STATE 0
+#define ROT_DIAL_POS 0
+// ======================================= BSPD PARAMETERS ======================================
 // This is the vehicle state which is affected both by the actions
 // of the driver and the current state of the inverter
 typedef enum
@@ -158,5 +179,5 @@ void update_outputs();     // Updates brake light and buzzer
 void update_cooling();     // Controls/updates the cooling system
 void update_display_fault_status(); 	// Check all vehicle fault messages and sends best one to display
 void limit_motor_torque();
-
+void pass_on_timer_info(); //this is def not the best way to do this
 #endif /* INC_VCU_H_ */

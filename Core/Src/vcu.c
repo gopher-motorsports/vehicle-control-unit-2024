@@ -9,6 +9,9 @@
 #include "gopher_sense.h"
 #include <stdlib.h>
 
+#include "stm32f4xx_hal.h"
+#include "stm32f4xx_hal_tim.h"
+#include "main.h"
 // The HAL_CAN struct
 CAN_HandleTypeDef* hcan;
 
@@ -29,6 +32,10 @@ boolean appsBrakeLatched_state = 0;
 boolean readyToDriveButtonPressed_state = 0;
 
 VEHICLE_STATE_t vehicle_state = VEHICLE_NO_COMMS;
+
+TIM_HandleTypeDef* PWM_Timer;
+U32 DRS_Channel;
+U32 PUMP_Channel;
 
 #define HBEAT_LED_DELAY_TIME_ms 500
 #define RTD_DEBOUNCE_TIME_ms 25
@@ -426,4 +433,28 @@ void update_outputs() {
 	return;
 }
 
+void pass_on_timer_info(TIM_HandleTypeDef* timer_address, U32 channel1, U32 channel2){
+	PWM_Timer = timer_address;
+	DRS_Channel = channel1;
+	PUMP_Channel = channel2;
+}
+
+void set_DRS_Servo_Position(){
+	static int DRS_POS_LUT[] = {DRS_POS_0, DRS_POS_1, DRS_POS_2, DRS_POS_3, DRS_POS_4,
+	                            DRS_POS_5, DRS_POS_6, DRS_POS_7, DRS_POS_8, DRS_POS_9,
+	                            DRS_POS_10, DRS_POS_11, DRS_POS_12, DRS_POS_13,
+	                            DRS_POS_14, DRS_POS_15};
+	static int rot_dial = ROT_DIAL_POS;
+	rot_dial = DRS_POS_LUT[rot_dial];
+
+    if (DRS_BUTTON_STATE == 1){
+    	__HAL_TIM_SET_COMPARE(PWM_Timer, DRS_Channel, rot_dial);
+    	HAL_TIM_PWM_Start(PWM_Timer, DRS_Channel);
+    }
+    else{
+    	__HAL_TIM_SET_COMPARE(PWM_Timer, DRS_Channel, 0);
+    	HAL_TIM_PWM_Stop(PWM_Timer,DRS_Channel); //is it better to just leave it on with duty 0?
+
+    }
+}
 // End of vcu.c

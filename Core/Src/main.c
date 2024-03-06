@@ -123,6 +123,9 @@ int main(void)
   init(&hcan2);
   gsense_init(&hcan2, &hadc1, NULL, NULL, &htim10, GSENSE_LED_GPIO_Port, GSENSE_LED_Pin);
 
+  HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_1); //start DRS PWM duty cycle = 0
+  HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_2); //start PUMP PWM duty cycel = 0;
+  pass_on_timer_info(&htim2, TIM_CHANNEL_1, TIM_CHANNEL_2);
   /* USER CODE END 2 */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -399,7 +402,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 0;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 4294967295;
+  htim2.Init.Period = 1000;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
