@@ -134,22 +134,39 @@ void update_gcan_states() {
 void update_cooling() {
 	// TODO: Ramp up cooling based on temperatures of the inverter and motor using PWM
 	// TODO: Set pump and fan pins to PWM
-	if(igbtATemp_C.data >= IGBT_TEMP_THRESH_C
-			|| igbtBTemp_C.data >= IGBT_TEMP_THRESH_C
-			|| igbtCTemp_C.data >= IGBT_TEMP_THRESH_C
-			|| gateDriverBoardTemp_C.data >= GDB_TEMP_THRESH_C
-			|| controlBoardTemp_C.data >= CTRL_BOARD_TEMP_THRESH_C
-			|| motorTemp_C.data >= MOTOR_TEMP_THRESH_C) {
-		HAL_GPIO_WritePin(RAD_FAN_GPIO_Port, RAD_FAN_Pin, PLM_CONTROL_ON);
 
-		// pump should always be on if there are any temps too high or if the tractive system is on
-		//HAL_GPIO_WritePin(PUMP_GPIO_Port, PUMP_Pin, PLM_CONTROL_ON);  //needs to change to something pwm
-	} else {
-		HAL_GPIO_WritePin(RAD_FAN_GPIO_Port, RAD_FAN_Pin, PLM_CONTROL_OFF);
+    double temp_readings[] = {igbtATemp_C.data, igbtBTemp_C.data, igbtCTemp_C.data, gateDriverBoardTemp_C.data, controlBoardTemp_C. data, motorTemp_C.data};
+	static double cooling_thresholds[] = {IGBT_TEMP_THRESH_C, IGBT_TEMP_THRESH_C, IGBT_TEMP_THRESH_C, GDB_TEMP_THRESH_C, CTRL_BOARD_TEMP_THRESH_C, MOTOR_TEMP_THRESH_C};
+	static U8 rad_fan_state = PLM_CONTROL_OFF;
+	int readings_below_HYS_threshold = 0;
 
-		// check if the tractive system is on, then we want to run the pump
-		//HAL_GPIO_WritePin(PUMP_GPIO_Port, PUMP_Pin, dcBusVoltage_V.data > 100 ? PLM_CONTROL_ON : PLM_CONTROL_OFF); //TODO change to pwm control
+	for(int i = 0; i < sizeof(cooling_thresholds) / sizeof(cooling_thresholds[0]); i++){
+		if(rad_fan_state == PLM_CONTROL_OFF && (temp_readings[i] >= (cooling_thresholds[i] + HYSTERESIS))){
+			rad_fan_state = PLM_CONTROL_ON;
+			HAL_GPIO_WritePin(RAD_FAN_GPIO_Port, RAD_FAN_Pin, rad_fan_state);
+			readings_below_HYS_threshold = 0;
+			break;
+		}
+
+		else if(rad_fan_state == PLM_CONTROL_ON){
+			if(temp_readings[i] <= (cooling_thresholds[i] - HYSTERESIS)){
+				readings_below_HYS_threshold++;
+			}
+
+			if(readings_below_HYS_threshold == sizeof(cooling_thresholds) / sizeof(cooling_thresholds[0])){
+						rad_fan_state = PLM_CONTROL_OFF;
+						HAL_GPIO_WritePin(RAD_FAN_GPIO_Port, RAD_FAN_Pin, rad_fan_state);
+				}
+		}
+
 	}
+
+	/*if(rad_fan_state == PLM_CONTROL_ON && readings_below_HYS_threshold == sizeof(cooling_thresholds) / sizeof(cooling_thresholds[0])){
+				rad_fan_state = PLM_CONTROL_OFF;
+				HAL_GPIO_WritePin(RAD_FAN_GPIO_Port, RAD_FAN_Pin, rad_fan_state);
+	}*/
+
+
 }
 
 void process_sensors() {
@@ -432,6 +449,7 @@ void update_outputs() {
 	}
 	return;
 }
+
 
 void pass_on_timer_info(TIM_HandleTypeDef* timer_address, U32 channel1, U32 channel2){
 	PWM_Timer = timer_address;

@@ -77,6 +77,8 @@
 #define GDB_TEMP_THRESH_C         40.0f // Minimum Gate Drive Board temp for cooling fan to turn on
 #define CTRL_BOARD_TEMP_THRESH_C  40.0f // Minimum Control Board temp for cooling fan to turn on
 #define MOTOR_TEMP_THRESH_C       50.0f // Minimum Motor temperature for cooling fan to turn on
+#define HYSTERESIS				  5.0f
+#define DUMBY_THRESHOLD			  0.0f
 // ==============================================================================================
 
 
