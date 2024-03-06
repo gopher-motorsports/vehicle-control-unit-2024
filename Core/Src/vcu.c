@@ -137,10 +137,11 @@ void update_cooling() {
 
     double temp_readings[] = {igbtATemp_C.data, igbtBTemp_C.data, igbtCTemp_C.data, gateDriverBoardTemp_C.data, controlBoardTemp_C. data, motorTemp_C.data};
 	static double cooling_thresholds[] = {IGBT_TEMP_THRESH_C, IGBT_TEMP_THRESH_C, IGBT_TEMP_THRESH_C, GDB_TEMP_THRESH_C, CTRL_BOARD_TEMP_THRESH_C, MOTOR_TEMP_THRESH_C};
+	double total_cooling_thresholds = sizeof(cooling_thresholds) / sizeof(cooling_thresholds[0]); //amount of cooling thresholds
 	static U8 rad_fan_state = PLM_CONTROL_OFF;
 	int readings_below_HYS_threshold = 0;
 
-	for(int i = 0; i < sizeof(cooling_thresholds) / sizeof(cooling_thresholds[0]); i++){
+	for(int i = 0; i < total_cooling_thresholds; i++){
 		if(rad_fan_state == PLM_CONTROL_OFF && (temp_readings[i] >= (cooling_thresholds[i] + HYSTERESIS))){
 			rad_fan_state = PLM_CONTROL_ON;
 			HAL_GPIO_WritePin(RAD_FAN_GPIO_Port, RAD_FAN_Pin, rad_fan_state);
@@ -153,20 +154,12 @@ void update_cooling() {
 				readings_below_HYS_threshold++;
 			}
 
-			if(readings_below_HYS_threshold == sizeof(cooling_thresholds) / sizeof(cooling_thresholds[0])){
-						rad_fan_state = PLM_CONTROL_OFF;
-						HAL_GPIO_WritePin(RAD_FAN_GPIO_Port, RAD_FAN_Pin, rad_fan_state);
-				}
-		}
-
-	}
-
-	/*if(rad_fan_state == PLM_CONTROL_ON && readings_below_HYS_threshold == sizeof(cooling_thresholds) / sizeof(cooling_thresholds[0])){
+			if(readings_below_HYS_threshold == total_cooling_thresholds){
 				rad_fan_state = PLM_CONTROL_OFF;
 				HAL_GPIO_WritePin(RAD_FAN_GPIO_Port, RAD_FAN_Pin, rad_fan_state);
-	}*/
-
-
+			}
+		}
+	}
 }
 
 void process_sensors() {
