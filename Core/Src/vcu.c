@@ -94,10 +94,6 @@ void update_gcan_states() {
 	update_and_queue_param_float(&pedalPosition1_percent, pedalPos1);
 	update_and_queue_param_float(&pedalPosition2_percent, pedalPos2);
 	// Log BSPD sensor faults
-	update_and_queue_param_u8(&bspdPedalPosition1Fault_state,
-			HAL_GPIO_ReadPin(BSPD_APPS1_FAULT_GPIO_Port, BSPD_APPS1_FAULT_Pin) == BSPD_APPS1_FAULT);
-	update_and_queue_param_u8(&bspdPedalPosition2Fault_state,
-			HAL_GPIO_ReadPin(BSPD_APPS2_FAULT_GPIO_Port, BSPD_APPS2_FAULT_Pin) == BSPD_APPS2_FAULT);
 	update_and_queue_param_u8(&bspdBrakePressureSensorFault_state,
 			HAL_GPIO_ReadPin(BSPD_BRK_FAULT_GPIO_Port, BSPD_BRK_FAULT_Pin) == BSPD_BRAKE_FAULT);
 	update_and_queue_param_u8(&bspdTractiveSystemCurrentSensorFault_state,
@@ -116,9 +112,8 @@ void update_gcan_states() {
 	// Requested torque
 	update_and_queue_param_float(&vcuTorqueRequested_Nm, desiredTorque_Nm);
 	// Cooling
-	update_and_queue_param_u8(&coolantFanPower_percent, 100*HAL_GPIO_ReadPin(FAN_GPIO_Port, FAN_Pin));
-	update_and_queue_param_u8(&coolantPumpPower_percent, 100*HAL_GPIO_ReadPin(PUMP_GPIO_Port, PUMP_Pin));
-	update_and_queue_param_u8(&accumulatorFanPower_percent, 100*HAL_GPIO_ReadPin(ACC_FAN_GPIO_Port, ACC_FAN_Pin));
+	update_and_queue_param_u8(&coolantFanPower_percent, 100*HAL_GPIO_ReadPin(RAD_FAN_GPIO_Port, RAD_FAN_Pin));
+	//update_and_queue_param_u8(&coolantPumpPower_percent, 100*HAL_GPIO_ReadPin(PUMP_GPIO_Port, PUMP_Pin));
 	// Vehicle state
 	update_and_queue_param_u8(&vehicleState_state, vehicle_state);
 	update_and_queue_param_u8(&readyToDriveButton_state, readyToDriveButtonPressed_state);
@@ -138,17 +133,15 @@ void update_cooling() {
 			|| gateDriverBoardTemp_C.data >= GDB_TEMP_THRESH_C
 			|| controlBoardTemp_C.data >= CTRL_BOARD_TEMP_THRESH_C
 			|| motorTemp_C.data >= MOTOR_TEMP_THRESH_C) {
-		HAL_GPIO_WritePin(FAN_GPIO_Port, FAN_Pin, PLM_CONTROL_ON);
-		HAL_GPIO_WritePin(ACC_FAN_GPIO_Port, ACC_FAN_Pin, PLM_CONTROL_ON);
+		HAL_GPIO_WritePin(RAD_FAN_GPIO_Port, RAD_FAN_Pin, PLM_CONTROL_ON);
 
 		// pump should always be on if there are any temps too high or if the tractive system is on
-		HAL_GPIO_WritePin(PUMP_GPIO_Port, PUMP_Pin, PLM_CONTROL_ON);
+		//HAL_GPIO_WritePin(PUMP_GPIO_Port, PUMP_Pin, PLM_CONTROL_ON);  //needs to change to something pwm
 	} else {
-		HAL_GPIO_WritePin(FAN_GPIO_Port, FAN_Pin, PLM_CONTROL_OFF);
+		HAL_GPIO_WritePin(RAD_FAN_GPIO_Port, RAD_FAN_Pin, PLM_CONTROL_OFF);
 
 		// check if the tractive system is on, then we want to run the pump
-		HAL_GPIO_WritePin(PUMP_GPIO_Port, PUMP_Pin, dcBusVoltage_V.data > 100 ? PLM_CONTROL_ON : PLM_CONTROL_OFF);
-		HAL_GPIO_WritePin(ACC_FAN_GPIO_Port, ACC_FAN_Pin, dcBusVoltage_V.data > 100 ? PLM_CONTROL_ON : PLM_CONTROL_OFF);
+		//HAL_GPIO_WritePin(PUMP_GPIO_Port, PUMP_Pin, dcBusVoltage_V.data > 100 ? PLM_CONTROL_ON : PLM_CONTROL_OFF); //TODO change to pwm control
 	}
 }
 
@@ -160,7 +153,7 @@ void process_sensors() {
 	if (!new_event)
 	{
 		// check if there is a change in polarity of the button
-		if (readyToDriveButtonPressed_state != (HAL_GPIO_ReadPin(GPIO1_GPIO_Port, GPIO1_Pin) == RTD_BUTTON_PUSHED))
+		if (readyToDriveButtonPressed_state != (HAL_GPIO_ReadPin(MCU_AUX_1_GPIO_Port, MCU_AUX_1_Pin) == RTD_BUTTON_PUSHED))
 		{
 			new_event = TRUE;
 			new_event_time = HAL_GetTick();
@@ -169,7 +162,7 @@ void process_sensors() {
 	else
 	{
 		// the button change was not held long enough
-		if (readyToDriveButtonPressed_state == (HAL_GPIO_ReadPin(GPIO1_GPIO_Port, GPIO1_Pin) == RTD_BUTTON_PUSHED))
+		if (readyToDriveButtonPressed_state == (HAL_GPIO_ReadPin(MCU_AUX_2_GPIO_Port, MCU_AUX_2_Pin) == RTD_BUTTON_PUSHED))
 		{
 			new_event = FALSE;
 		}
