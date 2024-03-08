@@ -7,19 +7,19 @@ buckets:
         frequency_hz: 250
         parameters:
             pedalPosition1_mm:
-                ADC: ADC1_IN6
+                ADC: ADC1_IN9
                 sensor: linear_pos_sensor_25
                 samples_buffered: 1
             pedalPosition2_mm:
-                ADC: ADC1_IN7
+                ADC: ADC1_IN8
                 sensor: linear_pos_sensor_25
                 samples_buffered: 1
             brakePressureFront_psi:
-                ADC: ADC1_IN8
+                ADC: ADC1_IN14
                 sensor: brake_pressure_sensor
                 samples_buffered: 1
             vcuTractiveSystemCurrent_A:
-                ADC: ADC1_IN14
+                ADC: ADC1_IN15
                 sensor: current_sensor_1
                 samples_buffered: 1
             pedalPosition1_percent:
@@ -35,7 +35,7 @@ buckets:
         frequency_hz: 100
         parameters:
             coolantPumpPressure_psi:
-                ADC: ADC1_IN5
+                ADC: ADC1_IN7
                 sensor: pressure_sensor_sealed_gauge
                 samples_buffered: 1
             
@@ -47,14 +47,14 @@ buckets:
                 ADC: NON_ADC
                 sensor: NON_ADC
                 samples_buffered: 1
-            bspdPedalPosition1Fault_state:
-                ADC: NON_ADC
-                sensor: NON_ADC
-                samples_buffered: 1
-            bspdPedalPosition2Fault_state:
-                ADC: NON_ADC
-                sensor: NON_ADC
-                samples_buffered: 1
+            # bspdPedalPosition1Fault_state: doesn't exist in hardware anymore
+            #     ADC: NON_ADC
+            #     sensor: NON_ADC
+            #     samples_buffered: 1
+            # bspdPedalPosition2Fault_state:
+            #     ADC: NON_ADC
+            #     sensor: NON_ADC
+            #     samples_buffered: 1
             bspdTractiveSystemCurrentSensorFault_state:
                 ADC: NON_ADC
                 sensor: NON_ADC

@@ -19,6 +19,9 @@
 #define IN_PER_FT         12     // For conversion from rpm to mph
 // ==============================================================================================
 
+// ========================================== PWM CONSTANTS =========================================
+#define TIM2_PWM_MAX	1600 //value where max overflow happens, defined in IOC in timer config
+
 // ======================================= APPS PARAMETERS ======================================
 #define APPS_MAX_TORQUE_POS_mm  20.0f // The position of the pedal at 100% torque
 #define APPS_MIN_TORQUE_POS_mm  10.0f  // The position of the pedal at 0% torque
@@ -73,14 +76,30 @@
 // ==============================================================================================
 
 // ====================================== COOLING PARAMETERS ====================================
-#define IGBT_TEMP_THRESH_C        40.0f // Minimum IGBT temperature for cooling fan to turn on
-#define GDB_TEMP_THRESH_C         40.0f // Minimum Gate Drive Board temp for cooling fan to turn on
-#define CTRL_BOARD_TEMP_THRESH_C  40.0f // Minimum Control Board temp for cooling fan to turn on
+#define INVERTER_TEMP_THRESH_C    40.0f // Minimum Inverter temp threshold for cooling fan to turn on
+#define INVERTER_TEMP_THRESH_C_1  45.0f //Inverter temp threshold + HYS + 3.0C
+#define INVERTER_TEMP_THRESH_C_2  48.0f //Inverter temp threshold + HYS + 6.0C
+#define INVERTER_TEMP_THRESH_C_3  51.0f //Inverter temp threshold + HYS + 8.0C
+#define INVERTER_TEMP_THRESH_C_4  54.0f //Inverter temp threshold + HYS + 11.0C
+
 #define MOTOR_TEMP_THRESH_C       50.0f // Minimum Motor temperature for cooling fan to turn on
-#define HYSTERESIS				  5.0f
-#define DUMBY_THRESHOLD			  0.0f
+#define MOTOR_TEMP_THRESH_C_1     55.0f //Motor temp threshold + HYS + 3.0C
+#define MOTOR_TEMP_THRESH_C_2     58.0f //Motor temp threshold + HYS + 6.0C
+#define MOTOR_TEMP_THRESH_C_3     61.0f //Motor temp threshold + HYS + 8.0C
+#define MOTOR_TEMP_THRESH_C_4     64.0f //Motor temp threshold + HYS + 11.0C
+
+#define HYSTERESIS_DIGITAL	      5.0f // Hysteresis when confined to digital signal (on/off)
+#define HYSTERESIS_ANALOG	      2.0f // Hysteresis when have PWM output signal (variable duty cycle)
+
+#define PUMP_INTENSITY_OFF		  0  //0% duty cycle --> 0/1600
+#define PUMP_INTENSITY_1		  400 //25% duty cycle --> 400/1600
+#define PUMP_INTENSITY_2		  800 //50% duty cycle --> 800/1600
+#define PUMP_INTENSITY_3		  1200 //75% duty cycle --> 1200/1600
+#define PUMP_INTENSITY_4		  1600 //100% duty cycle --> 1600/1600
 // ==============================================================================================
 
+// =============================== SENSOR OVERCURRENT PARAMETERS ================================
+#define SENSOR_OVERCURRENT_TRIPPED      (GPIO_PIN_RESET)
 
 // ================================== TRACTIVE SYSTEM PARAMETERS ================================
 #define MOTOR_DIRECTION         1      // Motor direction; 0 is reverse, 1 is forward

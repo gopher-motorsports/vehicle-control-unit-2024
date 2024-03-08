@@ -6,6 +6,7 @@
  */
 
 #include "vcu.h"
+#include "vcu_software_faults.h"
 #include "gopher_sense.h"
 #include <stdlib.h>
 
@@ -20,14 +21,12 @@ uint32_t preDriveTimer_ms = 0;
 float desiredTorque_Nm = 0;
 float torqueLimit_Nm = 0;
 
-uint16_t apps1FaultTimer_ms = 0;
-uint16_t apps2FaultTimer_ms = 0;
-uint16_t brakeSensorFaultTimer_ms = 0;
-uint16_t currentSensorFaultTimer_ms = 0;
 
-uint16_t correlationTimer_ms = 0;
 
 boolean appsBrakeLatched_state = 0;
+
+boolean Current_Fault_3V3_state = 0;
+boolean Current_Fault_5V5_state = 0;
 
 boolean readyToDriveButtonPressed_state = 0;
 
@@ -99,19 +98,19 @@ void update_gcan_states() {
 	// Log BSPD current/braking fault
 	update_and_queue_param_u8(&bspdTractiveSystemBrakingFault_state,
 			HAL_GPIO_ReadPin(BSPD_TS_BRK_FAULT_GPIO_Port, BSPD_TS_BRK_FAULT_Pin) == BSPD_TS_BRK_FAULT);
-	// VSC sensors faults
-	update_and_queue_param_u8(&vcuPedalPosition1Fault_state, apps1FaultTimer_ms > INPUT_TRIP_DELAY_ms);
-	update_and_queue_param_u8(&vcuPedalPosition2Fault_state, apps2FaultTimer_ms > INPUT_TRIP_DELAY_ms);
-	update_and_queue_param_u8(&vcuBrakePressureSensorFault_state, brakeSensorFaultTimer_ms > INPUT_TRIP_DELAY_ms);
-	update_and_queue_param_u8(&vcuTractiveSystemCurrentSensorFault_state, currentSensorFaultTimer_ms > INPUT_TRIP_DELAY_ms);
-	// VSC safety checks
-	update_and_queue_param_u8(&vcuPedalPositionCorrelationFault_state, correlationTimer_ms > CORRELATION_TRIP_DELAY_ms);
+	// VSC sensors faults, out of range checks
+	update_and_queue_param_u8(&vcuPedalPosition1Fault_state, TIMED_SOFTWARE_FAULTS[0]->state);
+	update_and_queue_param_u8(&vcuPedalPosition2Fault_state, TIMED_SOFTWARE_FAULTS[1]->state);
+	update_and_queue_param_u8(&vcuBrakePressureSensorFault_state, TIMED_SOFTWARE_FAULTS[2]->state);
+	update_and_queue_param_u8(&vcuTractiveSystemCurrentSensorFault_state, TIMED_SOFTWARE_FAULTS[3]->state);
+	// VSC safety checks, correlation and APPS/Brake Plausibility check
+	update_and_queue_param_u8(&vcuPedalPositionCorrelationFault_state, TIMED_SOFTWARE_FAULTS[4]->state);
 	update_and_queue_param_u8(&vcuPedalPositionBrakingFault_state, appsBrakeLatched_state);
 	// Requested torque
 	update_and_queue_param_float(&vcuTorqueRequested_Nm, desiredTorque_Nm);
 	// Cooling
 	update_and_queue_param_u8(&coolantFanPower_percent, 100*HAL_GPIO_ReadPin(RAD_FAN_GPIO_Port, RAD_FAN_Pin));
-	//update_and_queue_param_u8(&coolantPumpPower_percent, 100*HAL_GPIO_ReadPin(PUMP_GPIO_Port, PUMP_Pin));
+	//update_and_queue_param_u8(&coolantPumpPower_percent, 100*HAL_GPIO_ReadPin(PUMP_GPIO_Port, PUMP_Pin)); //TODO change to duty cycle percent
 	// Vehicle state
 	update_and_queue_param_u8(&vehicleState_state, vehicle_state);
 	update_and_queue_param_u8(&readyToDriveButton_state, readyToDriveButtonPressed_state);
@@ -125,15 +124,17 @@ void update_gcan_states() {
 void update_cooling() {
 	// TODO: Ramp up cooling based on temperatures of the inverter and motor using PWM
 	// TODO: Set pump and fan pins to PWM
-
-    double temp_readings[] = {igbtATemp_C.data, igbtBTemp_C.data, igbtCTemp_C.data, gateDriverBoardTemp_C.data, controlBoardTemp_C. data, motorTemp_C.data};
-	static double cooling_thresholds[] = {IGBT_TEMP_THRESH_C, IGBT_TEMP_THRESH_C, IGBT_TEMP_THRESH_C, GDB_TEMP_THRESH_C, CTRL_BOARD_TEMP_THRESH_C, MOTOR_TEMP_THRESH_C};
+	//change controlBoardTEMP_C to
+    double temp_readings[] = {controlBoardTemp_C. data, motorTemp_C.data};
+	static double cooling_thresholds[] = {INVERTER_TEMP_THRESH_C, MOTOR_TEMP_THRESH_C};
 	double total_cooling_thresholds = sizeof(cooling_thresholds) / sizeof(cooling_thresholds[0]); //amount of cooling thresholds
 	static U8 rad_fan_state = PLM_CONTROL_OFF;
+	static U16 pwm_pump_intensity = PUMP_INTENSITY_OFF;
 	int readings_below_HYS_threshold = 0;
 
+	//rad fan cooling
 	for(int i = 0; i < total_cooling_thresholds; i++){
-		if(rad_fan_state == PLM_CONTROL_OFF && (temp_readings[i] >= (cooling_thresholds[i] + HYSTERESIS))){
+		if(rad_fan_state == PLM_CONTROL_OFF && (temp_readings[i] >= (cooling_thresholds[i] + HYSTERESIS_DIGITAL))){
 			rad_fan_state = PLM_CONTROL_ON;
 			HAL_GPIO_WritePin(RAD_FAN_GPIO_Port, RAD_FAN_Pin, rad_fan_state);
 			readings_below_HYS_threshold = 0;
@@ -141,7 +142,7 @@ void update_cooling() {
 		}
 
 		else if(rad_fan_state == PLM_CONTROL_ON){
-			if(temp_readings[i] <= (cooling_thresholds[i] - HYSTERESIS)){
+			if(temp_readings[i] <= (cooling_thresholds[i] - HYSTERESIS_DIGITAL)){
 				readings_below_HYS_threshold++;
 			}
 
@@ -149,6 +150,33 @@ void update_cooling() {
 				rad_fan_state = PLM_CONTROL_OFF;
 				HAL_GPIO_WritePin(RAD_FAN_GPIO_Port, RAD_FAN_Pin, rad_fan_state);
 			}
+		}
+	}
+
+	//pump cooling
+	for(int i = 0; i < total_cooling_thresholds; i++){
+		if(pwm_pump_intensity == PUMP_INTENSITY_OFF && (temp_readings[i] >= (cooling_thresholds[i] + HYSTERESIS_ANALOG))){
+			pwm_pump_intensity = PUMP_INTENSITY_1;
+			__HAL_TIM_SET_COMPARE(PWM_Timer, PUMP_Channel, pwm_pump_intensity);
+			HAL_TIM_PWM_Start(PWM_Timer, PUMP_Channel);
+			readings_below_HYS_threshold = 0;
+			break;
+		}
+
+		else if(pwm_pump_intensity > PUMP_INTENSITY_OFF){
+			if(temp_readings[i] >= INVERTER_TEMP_THRESH_C_4 || temp_readings[i] >= MOTOR_TEMP_THRESH_C_4) pwm_pump_intensity = PUMP_INTENSITY_4;
+			else if(temp_readings[i] >= INVERTER_TEMP_THRESH_C_3 || temp_readings[i] >= MOTOR_TEMP_THRESH_C_3) pwm_pump_intensity = PUMP_INTENSITY_3;
+			else if(temp_readings[i] >= INVERTER_TEMP_THRESH_C_2 || temp_readings[i] >= MOTOR_TEMP_THRESH_C_2) pwm_pump_intensity = PUMP_INTENSITY_2;
+			else if(temp_readings[i] >= INVERTER_TEMP_THRESH_C_1 || temp_readings[i] >= MOTOR_TEMP_THRESH_C_1) pwm_pump_intensity = PUMP_INTENSITY_1;
+			else if(temp_readings[i] <= (cooling_thresholds[i] - HYSTERESIS_ANALOG)){
+				readings_below_HYS_threshold++;
+			}
+
+			if(readings_below_HYS_threshold == total_cooling_thresholds){
+				pwm_pump_intensity = PUMP_INTENSITY_OFF;
+				HAL_TIM_PWM_STOP(PWM_Timer, PUMP_Channel);
+			}
+			__HAL_TIM_SET_COMPARE(PWM_Timer, PUMP_Channel, pwm_pump_intensity);
 		}
 	}
 }
@@ -161,7 +189,7 @@ void process_sensors() {
 	if (!new_event)
 	{
 		// check if there is a change in polarity of the button
-		if (readyToDriveButtonPressed_state != (HAL_GPIO_ReadPin(MCU_AUX_1_GPIO_Port, MCU_AUX_1_Pin) == RTD_BUTTON_PUSHED))
+		if (readyToDriveButtonPressed_state != (HAL_GPIO_ReadPin(RTD_BUTTON_GPIO_Port, RTD_BUTTON_Pin) == RTD_BUTTON_PUSHED))
 		{
 			new_event = TRUE;
 			new_event_time = HAL_GetTick();
@@ -170,7 +198,7 @@ void process_sensors() {
 	else
 	{
 		// the button change was not held long enough
-		if (readyToDriveButtonPressed_state == (HAL_GPIO_ReadPin(MCU_AUX_2_GPIO_Port, MCU_AUX_2_Pin) == RTD_BUTTON_PUSHED))
+		if (readyToDriveButtonPressed_state == (HAL_GPIO_ReadPin(RTD_BUTTON_GPIO_Port, RTD_BUTTON_Pin) == RTD_BUTTON_PUSHED))
 		{
 			new_event = FALSE;
 		}
@@ -187,52 +215,32 @@ void process_sensors() {
 
 	torqueLimit_Nm = MAX_CMD_TORQUE_Nm;
 
-	// Input Validation Checks
-	if(pedalPosition1_mm.data > APPS_MAX_ERROR_POS_mm
-			|| pedalPosition1_mm.data < APPS_MIN_ERROR_POS_mm) {
-		apps1FaultTimer_ms = (apps1FaultTimer_ms > INPUT_TRIP_DELAY_ms) ? INPUT_TRIP_DELAY_ms + 1 : apps1FaultTimer_ms + 1;
-	} else {
-		apps1FaultTimer_ms = 0;
-	}
-	if(pedalPosition2_mm.data > APPS_MAX_ERROR_POS_mm
-				|| pedalPosition2_mm.data < APPS_MIN_ERROR_POS_mm) {
-		apps2FaultTimer_ms = (apps2FaultTimer_ms > INPUT_TRIP_DELAY_ms) ? INPUT_TRIP_DELAY_ms + 1 : apps2FaultTimer_ms + 1;
-	} else {
-		apps2FaultTimer_ms = 0;
-	}
-	if(brakePressureFront_psi.data > BRAKE_PRESS_MAX_psi
-			|| brakePressureFront_psi.data < BRAKE_PRESS_MIN_psi) {
-		brakeSensorFaultTimer_ms = (brakeSensorFaultTimer_ms > INPUT_TRIP_DELAY_ms) ? INPUT_TRIP_DELAY_ms + 1 : brakeSensorFaultTimer_ms + 1;
-	} else {
-		brakeSensorFaultTimer_ms = 0;
-	}
-	if(vcuTractiveSystemCurrent_A.data > TS_CURRENT_MAX_A
-			|| vcuTractiveSystemCurrent_A.data < TS_CURRENT_MIN_A) {
-		currentSensorFaultTimer_ms = (currentSensorFaultTimer_ms > INPUT_TRIP_DELAY_ms) ? INPUT_TRIP_DELAY_ms + 1 : currentSensorFaultTimer_ms + 1;
-	} else {
-		currentSensorFaultTimer_ms = 0;
-	}
-	if(apps1FaultTimer_ms > INPUT_TRIP_DELAY_ms
-			|| apps2FaultTimer_ms > INPUT_TRIP_DELAY_ms
-			|| brakeSensorFaultTimer_ms > INPUT_TRIP_DELAY_ms
-			|| currentSensorFaultTimer_ms > INPUT_TRIP_DELAY_ms) {
-		torqueLimit_Nm = 0;
+
+	update_struct_fault_data(); //refresh sensor data
+	// Input Validation (Out of Range) and Correlation Checks
+	SOFTWARE_FAULT* fault;
+	for(int i = 0; i < NUM_OF_TIMED_FAULTS; i++){
+		fault = TIMED_SOFTWARE_FAULTS[i];
+		if(fault->data > fault->max_threshold || fault->data < fault->min_threshold){ //correlation has no min, but edge case accounted for in defines
+			fault->fault_timer++;
+			if(fault->fault_timer > fault->input_delay_threshold){
+				fault->fault_timer = fault->input_delay_threshold + 1; //cap at delay_threshold + 1 so that it trips but doesn't count up more
+			}
+		}
+		else{
+			fault->fault_timer = 0;
+			fault->state = false;
+		}
+
+		if(fault->fault_timer > fault->input_delay_threshold){
+			fault->state = true;
+			torqueLimit_Nm = 0;
+		}
 	}
 
-	// Correlation Check
-	if(pedalPosition1_mm.data - pedalPosition2_mm.data > APPS_CORRELATION_THRESH_mm
-			|| pedalPosition2_mm.data - pedalPosition1_mm.data > APPS_CORRELATION_THRESH_mm) {
-		correlationTimer_ms = (correlationTimer_ms > CORRELATION_TRIP_DELAY_ms) ? CORRELATION_TRIP_DELAY_ms + 1 : currentSensorFaultTimer_ms + 1;
-	} else {
-		correlationTimer_ms = 0;
-	}
-	if(correlationTimer_ms > CORRELATION_TRIP_DELAY_ms) {
-		torqueLimit_Nm = 0;
-	}
 
-	// APPS/Braking Check
-	if((brakePressureFront_psi.data > APPS_BRAKE_PRESS_THRESH_psi
-			&& pedalPosition1_mm.data > APPS_BRAKE_APPS1_THRESH_mm)) {
+	// APPS/Braking Pedal Plausibility Check, edge case handled without struct
+	if(brakePressureFront_psi.data > APPS_BRAKE_PRESS_THRESH_psi && pedalPosition1_mm.data > APPS_BRAKE_APPS1_THRESH_mm) {
 		appsBrakeLatched_state = TRUE;
 	} else if (pedalPosition1_mm.data <= APPS_BRAKE_RESET_THRESH_mm) {
 		appsBrakeLatched_state = FALSE;
@@ -241,13 +249,21 @@ void process_sensors() {
 	if(appsBrakeLatched_state) {
 		torqueLimit_Nm = 0;
 	}
+
+	//Sensor overcurrent Logic, turn off power to inverter if any of the sensor power lines are overcurrenting
+	Current_Fault_3V3_state = HAL_GPIO_ReadPin(RTD_BUTTON_GPIO_Port, RTD_BUTTON_Pin) == SENSOR_OVERCURRENT_TRIPPED; //active low
+	Current_Fault_5V5_state = HAL_GPIO_ReadPin(RTD_BUTTON_GPIO_Port, RTD_BUTTON_Pin) == SENSOR_OVERCURRENT_TRIPPED; //active low
+	if(Current_Fault_3V3_state || Current_Fault_5V5_state){
+		torqueLimit_Nm = 0;
+	}
+
 	// TODO make some hysteresis on this in order to make it less jumpy
 	if(bspdTractiveSystemBrakingFault_state.data) {
 		float tractiveSystemBrakingLimit_Nm = 0;
 		float accumulatorVoltage_V = dcBusVoltage_V.data;
 		if(motorSpeed_rpm.data != 0) {
 			// Calculate max torque from speed and voltage, using angular velocity (rad/s)
-			tractiveSystemBrakingLimit_Nm = (BRAKE_TS_CURRENT_THRESH_A * accumulatorVoltage_V)
+			tractiveSystemBrakingLimit_Nm = (BRAKE_TS_CURRENT_THRESH_A * accumulatorVoltage_V) //stay below 5kw, when driver breaking hard
 					/ ((motorSpeed_rpm.data * MATH_TAU) / SECONDS_PER_MIN);
 		}
 		// If the tractive system braking limit is less (more restrictive),
@@ -270,6 +286,8 @@ void process_sensors() {
 		desiredTorque_Nm = torqueLimit_Nm;
 	}
 }
+
+
 
 void update_display_fault_status() {
 	int status = NONE;
@@ -409,7 +427,7 @@ void limit_motor_torque()
 	// current under 100A at the accumulator
 	if (motorSpeed_rpm.data > MIN_LIMIT_SPEED_rpm)
 	{
-		new_torque_limit = (dcBusVoltage_V.data * (9.593*TS_CURRENT_MAX_A)) / (motorSpeed_rpm.data);
+		new_torque_limit = (TS_CURRENT_MAX_A * dcBusVoltage_V.data) / ((motorSpeed_rpm.data * MATH_TAU) / SECONDS_PER_MIN); //limit to 80Kw of power
 	}
 	if (new_torque_limit < torqueCmdLim_Nm.data) torqueCmdLim_Nm.data = new_torque_limit;
 }
@@ -454,6 +472,7 @@ void pass_on_timer_info(TIM_HandleTypeDef* timer_address, U32 channel1, U32 chan
 }
 
 void set_DRS_Servo_Position(){
+	//duty cycle lookup table for each DRS position
 	static int DRS_POS_LUT[] = {DRS_POS_0, DRS_POS_1, DRS_POS_2, DRS_POS_3, DRS_POS_4,
 	                            DRS_POS_5, DRS_POS_6, DRS_POS_7, DRS_POS_8, DRS_POS_9,
 	                            DRS_POS_10, DRS_POS_11, DRS_POS_12, DRS_POS_13,
