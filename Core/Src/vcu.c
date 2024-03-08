@@ -174,7 +174,7 @@ void update_cooling() {
 
 			if(readings_below_HYS_threshold == total_cooling_thresholds){
 				pwm_pump_intensity = PUMP_INTENSITY_OFF;
-				HAL_TIM_PWM_STOP(PWM_Timer, PUMP_Channel);
+				HAL_TIM_PWM_Stop(PWM_Timer, PUMP_Channel);
 			}
 			__HAL_TIM_SET_COMPARE(PWM_Timer, PUMP_Channel, pwm_pump_intensity);
 		}
