@@ -113,7 +113,7 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* hadc)
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(PUMP_PRESS_GPIO_Port, &GPIO_InitStruct);
 
-    GPIO_InitStruct.Pin = BRK_Pin|TS_SNS_Pin;
+    GPIO_InitStruct.Pin = BRK_PRESS_IN_Pin|TS_SNS_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
@@ -174,7 +174,7 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* hadc)
     */
     HAL_GPIO_DeInit(PUMP_PRESS_GPIO_Port, PUMP_PRESS_Pin);
 
-    HAL_GPIO_DeInit(GPIOC, BRK_Pin|TS_SNS_Pin);
+    HAL_GPIO_DeInit(GPIOC, BRK_PRESS_IN_Pin|TS_SNS_Pin);
 
     HAL_GPIO_DeInit(GPIOB, APPS2_Pin|APPS1_Pin);
 
@@ -214,7 +214,7 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* hcan)
     PB8     ------> CAN1_RX
     PB9     ------> CAN1_TX
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_8|GPIO_PIN_9;
+    GPIO_InitStruct.Pin = CAN_RX1_Pin|CAN_TX1_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
@@ -242,7 +242,7 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* hcan)
     PB12     ------> CAN2_RX
     PB13     ------> CAN2_TX
     */
-    GPIO_InitStruct.Pin = CANRX_Pin|CANTX_Pin;
+    GPIO_InitStruct.Pin = CANRX2_Pin|CANTX2_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
@@ -286,7 +286,7 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* hcan)
     PB8     ------> CAN1_RX
     PB9     ------> CAN1_TX
     */
-    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_8|GPIO_PIN_9);
+    HAL_GPIO_DeInit(GPIOB, CAN_RX1_Pin|CAN_TX1_Pin);
 
   /* USER CODE BEGIN CAN1_MspDeInit 1 */
 
@@ -308,7 +308,7 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* hcan)
     PB12     ------> CAN2_RX
     PB13     ------> CAN2_TX
     */
-    HAL_GPIO_DeInit(GPIOB, CANRX_Pin|CANTX_Pin);
+    HAL_GPIO_DeInit(GPIOB, CANRX2_Pin|CANTX2_Pin);
 
     /* CAN2 interrupt DeInit */
     HAL_NVIC_DisableIRQ(CAN2_TX_IRQn);

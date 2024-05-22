@@ -59,6 +59,8 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define BRK_LT_Pin GPIO_PIN_13
+#define BRK_LT_GPIO_Port GPIOC
 #define BUZZER_Pin GPIO_PIN_15
 #define BUZZER_GPIO_Port GPIOC
 #define MCU_STATUS_LED_Pin GPIO_PIN_1
@@ -73,16 +75,16 @@ void Error_Handler(void);
 #define PUMP_PWM_GPIO_Port GPIOA
 #define STATUS_G_Pin GPIO_PIN_2
 #define STATUS_G_GPIO_Port GPIOA
-#define CURR_FAULT_3V3_Pin GPIO_PIN_4
-#define CURR_FAULT_3V3_GPIO_Port GPIOA
+#define CURR_FAULT_5V_Pin GPIO_PIN_4
+#define CURR_FAULT_5V_GPIO_Port GPIOA
 #define DRS_PWM_Pin GPIO_PIN_5
 #define DRS_PWM_GPIO_Port GPIOA
-#define CURR_FAULT_5V5_Pin GPIO_PIN_6
-#define CURR_FAULT_5V5_GPIO_Port GPIOA
+#define CURR_FAULT_3V3_Pin GPIO_PIN_6
+#define CURR_FAULT_3V3_GPIO_Port GPIOA
 #define PUMP_PRESS_Pin GPIO_PIN_7
 #define PUMP_PRESS_GPIO_Port GPIOA
-#define BRK_Pin GPIO_PIN_4
-#define BRK_GPIO_Port GPIOC
+#define BRK_PRESS_IN_Pin GPIO_PIN_4
+#define BRK_PRESS_IN_GPIO_Port GPIOC
 #define TS_SNS_Pin GPIO_PIN_5
 #define TS_SNS_GPIO_Port GPIOC
 #define APPS2_Pin GPIO_PIN_0
@@ -91,10 +93,10 @@ void Error_Handler(void);
 #define APPS1_GPIO_Port GPIOB
 #define RTD_BUTTON_Pin GPIO_PIN_10
 #define RTD_BUTTON_GPIO_Port GPIOB
-#define CANRX_Pin GPIO_PIN_12
-#define CANRX_GPIO_Port GPIOB
-#define CANTX_Pin GPIO_PIN_13
-#define CANTX_GPIO_Port GPIOB
+#define CANRX2_Pin GPIO_PIN_12
+#define CANRX2_GPIO_Port GPIOB
+#define CANTX2_Pin GPIO_PIN_13
+#define CANTX2_GPIO_Port GPIOB
 #define RAD_FAN_Pin GPIO_PIN_14
 #define RAD_FAN_GPIO_Port GPIOB
 #define BSPD_TS_SNS_FAULT_Pin GPIO_PIN_15
@@ -103,8 +105,6 @@ void Error_Handler(void);
 #define BSPD_BRK_FAULT_GPIO_Port GPIOC
 #define BSPD_TS_BRK_FAULT_Pin GPIO_PIN_7
 #define BSPD_TS_BRK_FAULT_GPIO_Port GPIOC
-#define BRK_LT_Pin GPIO_PIN_8
-#define BRK_LT_GPIO_Port GPIOA
 #define SWDIO_Pin GPIO_PIN_13
 #define SWDIO_GPIO_Port GPIOA
 #define SWCLK_Pin GPIO_PIN_14
@@ -123,6 +123,10 @@ void Error_Handler(void);
 #define USART_TX_GPIO_Port GPIOB
 #define USART_RX_Pin GPIO_PIN_7
 #define USART_RX_GPIO_Port GPIOB
+#define CAN_RX1_Pin GPIO_PIN_8
+#define CAN_RX1_GPIO_Port GPIOB
+#define CAN_TX1_Pin GPIO_PIN_9
+#define CAN_TX1_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */

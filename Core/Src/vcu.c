@@ -44,9 +44,13 @@ U32 PUMP_Channel;
 void init(CAN_HandleTypeDef* hcan_ptr) {
 	hcan = hcan_ptr;
 
-	init_can(GCAN1, hcan, VCU_ID, BXTYPE_SLAVE);
+	init_can(hcan, GCAN1);
 }
 
+uint8_t RAD_FAN_state = 0;
+uint8_t RTD_BUTTON_state = 0;
+uint8_t BRK_LIGHT_OUT_state = 0;
+uint8_t BUZZER_state = 0;
 void main_loop() {
 
 	process_sensors();
@@ -56,6 +60,20 @@ void main_loop() {
 	update_display_fault_status();
 	update_gcan_states(); // Should be after process_sensors
 	LED_task();
+
+	//MCU specific outputs
+	//HAL_GPIO_WritePin(FAULT_LED_GPIO_Port, FAULT_LED_Pin, fault_led_state);
+
+	//inputs
+	//power_3v3_fault_state = HAL_GPIO_ReadPin(SWITCH_FAULT_3V3_GPIO_Port, SWITCH_FAULT_3V3_Pin);
+	//power_5V_fault_state = HAL_GPIO_ReadPin(SWITCH_FAULT_5V_GPIO_Port, SWITCH_FAULT_5V_Pin);
+
+	//outputs side
+	HAL_GPIO_WritePin(RAD_FAN_GPIO_Port, RAD_FAN_Pin, RAD_FAN_state);
+	HAL_GPIO_WritePin(BRK_LT_GPIO_Port, BRK_LT_Pin, BRK_LIGHT_OUT_state);
+	HAL_GPIO_WritePin(RTD_BUTTON_GPIO_Port, RTD_BUTTON_Pin, RTD_BUTTON_state);
+	HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, BUZZER_state);
+
 
 }
 
@@ -310,6 +328,14 @@ void update_display_fault_status() {
 	update_and_queue_param_u8(&displayFaultStatus_state, status);
 }
 
+
+
+void inverter_sm(){
+	switch (vehicle_state)
+		{
+		case VEHICLE_NO_COMMS:
+
+}
 
 void process_inverter() {
 	U8 inverter_enable_state = INVERTER_DISABLE;
