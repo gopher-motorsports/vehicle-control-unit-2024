@@ -101,12 +101,12 @@
 // =============================== SENSOR OVERCURRENT PARAMETERS ================================
 #define SENSOR_OVERCURRENT_TRIPPED      (GPIO_PIN_RESET)
 
-// ================================== TRACTIVE SYSTEM PARAMETERS ================================
+// ================================== TRACTIVE SYSTEM PARAMETERS 2023 ================================
 #define MOTOR_DIRECTION         1      // Motor direction; 0 is reverse, 1 is forward
 #define MAX_CMD_TORQUE_Nm       150.0f    // The maximum torque that will be commanded
 #define INVERTER_TIMEOUT_ms     100    // The time after which the vehicle will enter STARTUP
-#define INVERTER_ENABLE         0x01   // Flags to enable the inverter
-#define INVERTER_DISABLE        0x00   // Flags to disable the inverter
+#define INVERTER_ENABLE         1      // Flags to enable the inverter
+#define INVERTER_DISABLE        0   	// Flags to disable the inverter
 #define INVERTER_LOCKOUT        0x80   // Lockout is bit 7 of byte 6
 #define INVERTER_CMD_ID         0x0C0  // The CAN ID of the inverter command
 #define INVERTER_PARAM_ID       0x0C1  // The CAN ID of the parameter message
@@ -118,8 +118,22 @@
 #define PARAM_CMD_RESERVED2     0x0000 // Reserved value in inverter parameter
 #define FINAL_DRIVE_RATIO       4.363  // The final drive ratio
 #define WHEEL_DIAMETER_IN       10     // Wheel diameter
+
+
 // ==============================================================================================
 
+// ================================== TRACTIVE SYSTEM PARAMETERS 2024 ================================
+#define INVERTER_DRIVE_ENABLE_CMD_ID         0x18E  // The CAN ID for Drive Enable Command
+#define INVERTER_MAX_CURRENT_AC_LIMIT_CMD_ID 0x10E  // The CAN ID for Setting Max Current Limit
+#define INVERTER_SET_CURRENT_AC_CMD_ID     	 0x02E  // The CAN ID for Setting Desired Inverter Current
+#define MAX_TEST_CMD_CURRENT_A    			 200  // The maximum current that will be commanded
+#define DRIVE_ENABLE_INVERTER_TIMEOUT		 250 //Inverter Timeout if
+
+#define APPS_MAX_CURRENT_POS_mm  20.0f // The position of the pedal at 100% torque
+#define APPS_MIN_CURRENT_POS_mm  10.0f  // The position of the pedal at 0% torque
+#define APPS_MAX_ERROR_POS_mm 24.0f // position where the error begins
+#define APPS_MIN_ERROR_POS_mm 1.0f // position where the error begins
+//#define APPS_TOTAL_TRAVEL_mm ( APPS_MAX_CURRENT_POS_mm - APPS_MIN_CURRENT_POS_mm )
 // ======================================== I/O PARAMETERS ======================================
 #define MOSFET_PULL_DOWN_ON (GPIO_PIN_SET)
 #define MOSFET_PULL_DOWN_OFF (GPIO_PIN_RESET)
@@ -167,11 +181,10 @@
 typedef enum
 {
 	VEHICLE_NO_COMMS  = 0, // When the inverter first turns on and if there is ever a loss of communication
-	VEHICLE_LOCKOUT   = 1, // The vehicle can detect that the inverter is in lockout
+	VEHICLE_FAULT     = 1, // The vehicle can detect that the inverter is Faulting
 	VEHICLE_STANDBY   = 2, // The inverter has exited lockout but no torque commands will be sent
 	VEHICLE_PREDRIVE  = 3, // The vehicle buzzer is active and the driving state will be entered
 	VEHICLE_DRIVING   = 4, // Torque commands are actively being sent from APPS positions
-	VEHICLE_FAULT     = 5
 } VEHICLE_STATE_t;
 
 typedef enum {

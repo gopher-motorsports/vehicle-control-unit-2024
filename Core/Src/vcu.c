@@ -18,10 +18,12 @@ CAN_HandleTypeDef* hcan;
 
 uint32_t maxCurrent_mA = 0;
 uint32_t preDriveTimer_ms = 0;
-float desiredTorque_Nm = 0;
+
+uint16_t desiredCurrent_A = 0;
+uint16_t maxcurrentLimit_A = 0;
+
 float torqueLimit_Nm = 0;
-
-
+float desiredTorque_Nm = 0;
 
 boolean appsBrakeLatched_state = 0;
 
@@ -38,7 +40,7 @@ U32 PUMP_Channel;
 
 #define HBEAT_LED_DELAY_TIME_ms 500
 #define RTD_DEBOUNCE_TIME_ms 25
-#define SET_INV_DISABLED() do{ desiredTorque_Nm = 0; torqueLimit_Nm = MAX_CMD_TORQUE_Nm; inverter_enable_state = INVERTER_DISABLE; } while(0)
+#define SET_INV_DISABLED() do{ desiredCurrent_A = 0; maxcurrentLimit_A = MAX_TEST_CMD_CURRENT_A; inverter_enable_state = INVERTER_DISABLE; } while(0)
 
 // Initialization code goes here
 void init(CAN_HandleTypeDef* hcan_ptr) {
@@ -47,10 +49,6 @@ void init(CAN_HandleTypeDef* hcan_ptr) {
 	init_can(hcan, GCAN1);
 }
 
-uint8_t RAD_FAN_state = 0;
-uint8_t RTD_BUTTON_state = 0;
-uint8_t BRK_LIGHT_OUT_state = 0;
-uint8_t BUZZER_state = 0;
 void main_loop() {
 
 	process_sensors();
@@ -60,21 +58,6 @@ void main_loop() {
 	update_display_fault_status();
 	update_gcan_states(); // Should be after process_sensors
 	LED_task();
-
-	//MCU specific outputs
-	//HAL_GPIO_WritePin(FAULT_LED_GPIO_Port, FAULT_LED_Pin, fault_led_state);
-
-	//inputs
-	//power_3v3_fault_state = HAL_GPIO_ReadPin(SWITCH_FAULT_3V3_GPIO_Port, SWITCH_FAULT_3V3_Pin);
-	//power_5V_fault_state = HAL_GPIO_ReadPin(SWITCH_FAULT_5V_GPIO_Port, SWITCH_FAULT_5V_Pin);
-
-	//outputs side
-	HAL_GPIO_WritePin(RAD_FAN_GPIO_Port, RAD_FAN_Pin, RAD_FAN_state);
-	HAL_GPIO_WritePin(BRK_LT_GPIO_Port, BRK_LT_Pin, BRK_LIGHT_OUT_state);
-	HAL_GPIO_WritePin(RTD_BUTTON_GPIO_Port, RTD_BUTTON_Pin, RTD_BUTTON_state);
-	HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, BUZZER_state);
-
-
 }
 
 /**
@@ -231,7 +214,7 @@ void process_sensors() {
 		}
 	}
 
-	torqueLimit_Nm = MAX_CMD_TORQUE_Nm;
+	desiredCurrent_A = MAX_TEST_CMD_CURRENT_A;
 
 
 	update_struct_fault_data(); //refresh sensor data
@@ -294,14 +277,14 @@ void process_sensors() {
 		}
 	}
 
-	desiredTorque_Nm = ((pedalPosition1_mm.data-APPS_MIN_TORQUE_POS_mm)/APPS_TOTAL_TRAVEL_mm)*MAX_CMD_TORQUE_Nm;
+	desiredCurrent_A = ((pedalPosition1_mm.data-APPS_MIN_CURRENT_POS_mm)/APPS_TOTAL_TRAVEL_mm) * MAX_TEST_CMD_CURRENT_A;
 
-	if(pedalPosition1_mm.data < APPS_MIN_TORQUE_POS_mm) {
-		desiredTorque_Nm = 0;
+	if(pedalPosition1_mm.data < APPS_MIN_CURRENT_POS_mm) {
+		desiredCurrent_A = 0;
 	}
 
-	if(desiredTorque_Nm > torqueLimit_Nm) {
-		desiredTorque_Nm = torqueLimit_Nm;
+	if(desiredCurrent_A >  MAX_TEST_CMD_CURRENT_A) {
+		desiredCurrent_A =  MAX_TEST_CMD_CURRENT_A;
 	}
 }
 
@@ -328,74 +311,34 @@ void update_display_fault_status() {
 	update_and_queue_param_u8(&displayFaultStatus_state, status);
 }
 
-
-
-void inverter_sm(){
-	switch (vehicle_state)
-		{
-		case VEHICLE_NO_COMMS:
+void simplified_process_inverter(){
 
 }
 
 void process_inverter() {
 	U8 inverter_enable_state = INVERTER_DISABLE;
 
-//	// if we loose comms with the inverter we should enter no NO_COMMS state. Also include a 100ms
-//	// startup time to make sure all the different systems have a chance to boot up
-//	if (HAL_GetTick() <= INVERTER_TIMEOUT_ms ||
-//			(HAL_GetTick() - inverterState_state.info.last_rx) > INVERTER_TIMEOUT_ms)
-//	{
-//		// if we have no comms, do not do the rest of this function until we have them
-//		vehicle_state = VEHICLE_NO_COMMS;
-//		return;
-//	}
-
-	// at this point we know we are receiving data from the inverter
-
-	// error out if we are in speed mode for some reason
-	if(invStatesByte4_state.data & 0x01) {
-		// TODO: ADD AN ERROR CODE IF WE ARE IN SPEED MODE
-	}
-
-	// if we ever enter lockout, make sure to go to that state to correctly handle it
-	if((invStatesByte6_state.data & INVERTER_LOCKOUT)) {
-		vehicle_state = VEHICLE_LOCKOUT;
-
-		invParameterAddress_state.data = PARAM_CMD_FAULT_CLEAR;
-		invParameterRW_state.data = PARAM_CMD_WRITE;
-		invParameterReserved1_state.data = PARAM_CMD_RESERVED1;
-		invParameterData_state.data = PARAM_FAULT_CLEAR_DATA;
-		invParameterReserved2_state.data = PARAM_CMD_RESERVED2;
-		send_group(INVERTER_PARAM_ID);
-		service_can_tx(hcan);
+	if(faultCode.data != 0x00) {
+		//send
+		vehicle_state = VEHICLE_FAULT;
 	}
 
 	switch (vehicle_state)
 	{
 	case VEHICLE_NO_COMMS:
-		// wait for comms to try and exit lockout
-		if ((HAL_GetTick() - inverterState_state.info.last_rx) < INVERTER_TIMEOUT_ms)
+		// check too see we are receiving messages from inverter to validate comms
+		if ((HAL_GetTick() -  driveEnableInvStatus_state.info.last_rx) < INVERTER_TIMEOUT_ms)
 		{
-			vehicle_state = VEHICLE_LOCKOUT;
+			vehicle_state = VEHICLE_STANDBY;
 		}
 		SET_INV_DISABLED();
 		break;
 
-	case VEHICLE_LOCKOUT:
+	case VEHICLE_FAULT:
 		// try and exit the lockout mode of the inverter. This will be present whenever there is a fault
-		if((invStatesByte6_state.data & INVERTER_LOCKOUT)) {
-			// We're in lockout; reset faults
-			invParameterAddress_state.data = PARAM_CMD_FAULT_CLEAR;
-			invParameterRW_state.data = PARAM_CMD_WRITE;
-			invParameterReserved1_state.data = PARAM_CMD_RESERVED1;
-			invParameterData_state.data = PARAM_FAULT_CLEAR_DATA;
-			invParameterReserved2_state.data = PARAM_CMD_RESERVED2;
-			send_group(INVERTER_PARAM_ID);
-			service_can_tx(hcan);
-			vehicle_state = VEHICLE_LOCKOUT;
-		} else {
-			// We've exited lockout
-			vehicle_state = VEHICLE_STANDBY;
+		if(faultCode.data == 0x00) {
+			//do nothing, see if the fault goes away
+			vehicle_state = VEHICLE_NO_COMMS;
 		}
 		SET_INV_DISABLED();
 		break;
@@ -404,7 +347,7 @@ void process_inverter() {
 		// everything is good to go in this state, we are just waiting to enable the RTD button
 		if (brakePressureFront_psi.data > PREDRIVE_BRAKE_THRESH_psi &&
 				readyToDriveButtonPressed_state &&
-				dcBusVoltage_V.data > TS_ON_THRESHOLD_VOLTAGE_V)
+				inputInverterVoltage_V.data > TS_ON_THRESHOLD_VOLTAGE_V)
 		{
 			// Button is pressed, set state to VEHICLE_PREDRIVE
 			vehicle_state = VEHICLE_PREDRIVE;
@@ -423,7 +366,7 @@ void process_inverter() {
 
 	case VEHICLE_DRIVING:
 		// let the car run as normal. Do not change desiredTorque
-		limit_motor_torque();
+		//limit_motor_torque();
 		inverter_enable_state = INVERTER_ENABLE;
 		break;
 
@@ -433,13 +376,14 @@ void process_inverter() {
 		break;
 	}
 
-	// send the torque request
-	torqueCmd_Nm.data = desiredTorque_Nm;
-	torqueCmdLim_Nm.data = torqueLimit_Nm;
-	invCmdFlags_state.data = inverter_enable_state;
-	speedCmd_rpm.data = 0;
-	cmdDir_state.data = (U8)(MOTOR_DIRECTION > 0);
-	send_group(INVERTER_CMD_ID);
+	// send the current request
+	desiredInvCurrentPeakToPeak_A.data = desiredCurrent_A;
+	maxCurrentLimitPeakToPeak_A.data = maxcurrentLimit_A;
+	driveEnable_state.data = inverter_enable_state;
+
+	send_group(INVERTER_SET_CURRENT_AC_CMD_ID);
+	send_group(INVERTER_MAX_CURRENT_AC_LIMIT_CMD_ID);
+	send_group(INVERTER_DRIVE_ENABLE_CMD_ID);
 	service_can_tx(hcan);
 }
 
