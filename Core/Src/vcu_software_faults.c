@@ -66,7 +66,7 @@ SOFTWARE_FAULT Pedal_Correlation_Fault = {
 	.input_delay_threshold = CORRELATION_TRIP_DELAY_ms,
 	.state = false
 };
-
+//look at 100 fault
 SOFTWARE_FAULT* TIMED_SOFTWARE_FAULTS[NUM_OF_TIMED_FAULTS] = {
     &APPS1_Range_Fault,
     &APPS2_Range_Fault,

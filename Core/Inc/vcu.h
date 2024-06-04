@@ -9,7 +9,12 @@
 #define INC_VCU_H_
 
 #include "main.h"
-
+#include "GopherCAN.h"
+#include <stdio.h>
+#include <stdbool.h>
+#include <string.h>
+#include <stdbool.h>
+#include <cmsis_os.h>
 
 // ========================================== CONSTANTS =========================================
 #define MATH_PI           3.14159265
@@ -104,7 +109,7 @@
 // ================================== TRACTIVE SYSTEM PARAMETERS 2023 ================================
 #define MOTOR_DIRECTION         1      // Motor direction; 0 is reverse, 1 is forward
 #define MAX_CMD_TORQUE_Nm       150.0f    // The maximum torque that will be commanded
-#define INVERTER_TIMEOUT_ms     100    // The time after which the vehicle will enter STARTUP
+#define INVERTER_TIMEOUT_ms     200    // The time after which the vehicle will enter STARTUP
 #define INVERTER_ENABLE         1      // Flags to enable the inverter
 #define INVERTER_DISABLE        0   	// Flags to disable the inverter
 #define INVERTER_LOCKOUT        0x80   // Lockout is bit 7 of byte 6
@@ -127,7 +132,7 @@
 #define INVERTER_MAX_CURRENT_AC_LIMIT_CMD_ID 0x10E  // The CAN ID for Setting Max Current Limit
 #define INVERTER_SET_CURRENT_AC_CMD_ID     	 0x02E  // The CAN ID for Setting Desired Inverter Current
 #define MAX_TEST_CMD_CURRENT_A    			 200  // The maximum current that will be commanded
-#define DRIVE_ENABLE_INVERTER_TIMEOUT		 250 //Inverter Timeout if
+#define DRIVE_ENABLE_INVERTER_TIMEOUT		 200 //Inverter Timeout if
 
 #define APPS_MAX_CURRENT_POS_mm  20.0f // The position of the pedal at 100% torque
 #define APPS_MIN_CURRENT_POS_mm  10.0f  // The position of the pedal at 0% torque
@@ -155,26 +160,6 @@
 // for redundancy in the correlation  check mandated by rules
 // ============================================================
 
-// ======================================= DRS PARAMETERS ======================================
-#define DRS_POS_0 100
-#define DRS_POS_1 200
-#define DRS_POS_2 300
-#define DRS_POS_3 400
-#define DRS_POS_4 500
-#define DRS_POS_5 600
-#define DRS_POS_6 700
-#define DRS_POS_7 800
-#define DRS_POS_8 900
-#define DRS_POS_9 1000
-#define DRS_POS_10 1100
-#define DRS_POS_11 1200
-#define DRS_POS_12 1300
-#define DRS_POS_13 1400
-#define DRS_POS_14 1500
-#define DRS_POS_15 1600
-
-#define DRS_BUTTON_STATE 0
-#define ROT_DIAL_POS 0
 // ======================================= BSPD PARAMETERS ======================================
 // This is the vehicle state which is affected both by the actions
 // of the driver and the current state of the inverter
@@ -215,5 +200,5 @@ void update_display_fault_status(); 	// Check all vehicle fault messages and sen
 void limit_motor_torque();
 void LED_task();
 void pass_on_timer_info(); //this is def not the best way to do this
-void set_DRS_Servo_Position();
+void set_DRS_Servo_Position(U8 start_up_condition);
 #endif /* INC_VCU_H_ */

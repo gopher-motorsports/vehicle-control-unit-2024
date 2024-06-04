@@ -8,6 +8,7 @@
 #include "vcu.h"
 #include "vcu_software_faults.h"
 #include "gopher_sense.h"
+#include "drs.h"
 #include <stdlib.h>
 
 #include "stm32f4xx_hal.h"
@@ -19,8 +20,8 @@ CAN_HandleTypeDef* hcan;
 uint32_t maxCurrent_mA = 0;
 uint32_t preDriveTimer_ms = 0;
 
-uint16_t desiredCurrent_A = 0;
-uint16_t maxcurrentLimit_A = 0;
+float desiredCurrent_A = 0;
+float maxcurrentLimit_A = 15;
 
 float torqueLimit_Nm = 0;
 float desiredTorque_Nm = 0;
@@ -35,7 +36,6 @@ boolean readyToDriveButtonPressed_state = 0;
 VEHICLE_STATE_t vehicle_state = VEHICLE_NO_COMMS;
 
 TIM_HandleTypeDef* PWM_Timer;
-U32 DRS_Channel;
 U32 PUMP_Channel;
 
 #define HBEAT_LED_DELAY_TIME_ms 500
@@ -54,10 +54,11 @@ void main_loop() {
 	process_sensors();
 	process_inverter();
 	update_outputs();
-	update_cooling();
+	//update_cooling();
 	update_display_fault_status();
 	update_gcan_states(); // Should be after process_sensors
 	LED_task();
+	set_DRS_Servo_Position(FALSE);
 }
 
 /**
@@ -314,14 +315,18 @@ void update_display_fault_status() {
 void simplified_process_inverter(){
 
 }
+/*
+uint8_t test_state = 0;
+uint16_t desired_test_current = 0;
+uint16_t max_test_limit = 0;*/
 
 void process_inverter() {
 	U8 inverter_enable_state = INVERTER_DISABLE;
-
+	/*
 	if(faultCode.data != 0x00) {
 		//send
 		vehicle_state = VEHICLE_FAULT;
-	}
+	}*/
 
 	switch (vehicle_state)
 	{
@@ -381,6 +386,10 @@ void process_inverter() {
 	maxCurrentLimitPeakToPeak_A.data = maxcurrentLimit_A;
 	driveEnable_state.data = inverter_enable_state;
 
+	/*desiredInvCurrentPeakToPeak_A.data = desired_test_current;
+	maxCurrentLimitPeakToPeak_A.data = max_test_limit;
+	driveEnable_state.data = test_state;*/
+
 	send_group(INVERTER_SET_CURRENT_AC_CMD_ID);
 	send_group(INVERTER_MAX_CURRENT_AC_LIMIT_CMD_ID);
 	send_group(INVERTER_DRIVE_ENABLE_CMD_ID);
@@ -435,29 +444,5 @@ void LED_task(){
 	HAL_GPIO_WritePin(STATUS_B_GPIO_Port, STATUS_B_Pin, SET);
 }
 
-void pass_on_timer_info(TIM_HandleTypeDef* timer_address, U32 channel1, U32 channel2){
-	PWM_Timer = timer_address;
-	DRS_Channel = channel1;
-	PUMP_Channel = channel2;
-}
 
-void set_DRS_Servo_Position(){
-	//duty cycle lookup table for each DRS position
-	static int DRS_POS_LUT[] = {DRS_POS_0, DRS_POS_1, DRS_POS_2, DRS_POS_3, DRS_POS_4,
-	                            DRS_POS_5, DRS_POS_6, DRS_POS_7, DRS_POS_8, DRS_POS_9,
-	                            DRS_POS_10, DRS_POS_11, DRS_POS_12, DRS_POS_13,
-	                            DRS_POS_14, DRS_POS_15};
-    int rot_dial = ROT_DIAL_POS; //change macro to actual g-can variable
-	rot_dial = DRS_POS_LUT[rot_dial];
-
-    if (DRS_BUTTON_STATE == 1){ //change macro to actual g-can variable
-    	__HAL_TIM_SET_COMPARE(PWM_Timer, DRS_Channel, rot_dial);
-    	HAL_TIM_PWM_Start(PWM_Timer, DRS_Channel);
-    }
-    else{
-    	__HAL_TIM_SET_COMPARE(PWM_Timer, DRS_Channel, 0);
-    	HAL_TIM_PWM_Stop(PWM_Timer,DRS_Channel); //is it better to just leave it on with duty 0?
-
-    }
-}
 // End of vcu.c

@@ -24,7 +24,7 @@
 /* USER CODE BEGIN Includes */
 #include "vcu.h"
 #include "gopher_sense.h"
-
+#include "drs.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -125,7 +125,7 @@ int main(void)
 
   HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_1); //start DRS PWM duty cycle = 0
   HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_2); //start PUMP PWM duty cycel = 0;
-  pass_on_timer_info(&htim2, TIM_CHANNEL_1, TIM_CHANNEL_2);
+  init_DRS_servo(&htim2, TIM_CHANNEL_1);
   /* USER CODE END 2 */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -402,7 +402,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 0;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 1000;
+  htim2.Init.Period = 29999;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
@@ -429,10 +429,6 @@ static void MX_TIM2_Init(void)
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
   {
     Error_Handler();
   }
@@ -547,7 +543,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOA, STATUS_R_Pin|STATUS_G_Pin|HARDFAULT_LED_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, RTD_BUTTON_Pin|RAD_FAN_Pin|AUX_GPIO_2_Pin|AUX_GPIO_1_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, RAD_FAN_Pin|AUX_GPIO_2_Pin|AUX_GPIO_1_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(MCU_AUX_1_GPIO_Port, MCU_AUX_1_Pin, GPIO_PIN_RESET);
@@ -574,8 +570,14 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : RTD_BUTTON_Pin RAD_FAN_Pin AUX_GPIO_2_Pin AUX_GPIO_1_Pin */
-  GPIO_InitStruct.Pin = RTD_BUTTON_Pin|RAD_FAN_Pin|AUX_GPIO_2_Pin|AUX_GPIO_1_Pin;
+  /*Configure GPIO pin : RTD_BUTTON_Pin */
+  GPIO_InitStruct.Pin = RTD_BUTTON_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(RTD_BUTTON_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : RAD_FAN_Pin AUX_GPIO_2_Pin AUX_GPIO_1_Pin */
+  GPIO_InitStruct.Pin = RAD_FAN_Pin|AUX_GPIO_2_Pin|AUX_GPIO_1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
