@@ -57,7 +57,7 @@
 
 // ====================================== SAFETY PARAMETERS =====================================
 // -------------------------------------- Input Validation --------------------------------------
-#define INPUT_TRIP_DELAY_ms 100  // The amount of time it takes an input fault to take effect
+#define INPUT_TRIP_DELAY_ms 85  // The amount of time it takes an input fault to take effect
 
 // -------------------------------------- APPS/Brake Check --------------------------------------
 // This check is done using APPS1 (since APPS1 determines the applied torque) and the BSE

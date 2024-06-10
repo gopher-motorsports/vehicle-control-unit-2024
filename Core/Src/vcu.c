@@ -240,7 +240,7 @@ void update_cooling() {
 			}
 		}
 
-		HAL_GPIO_WritePin(RAD_FAN_GPIO_Port, RAD_FAN_Pin, rad_fan_state);
+		HAL_GPIO_WritePin(PUMP_PWM_GPIO_Port, PUMP_PWM_Pin, PUMP_PWM_state);
 #endif
 
 }
