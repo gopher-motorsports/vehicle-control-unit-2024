@@ -51,7 +51,6 @@ CAN_HandleTypeDef hcan2;
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
-TIM_HandleTypeDef htim5;
 TIM_HandleTypeDef htim10;
 
 UART_HandleTypeDef huart1;
@@ -74,7 +73,6 @@ static void MX_TIM2_Init(void);
 static void MX_CAN1_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_TIM3_Init(void);
-static void MX_TIM5_Init(void);
 void task_MainTask(void const * argument);
 void task_BufferHandling(void const * argument);
 
@@ -126,13 +124,13 @@ int main(void)
   MX_CAN1_Init();
   MX_TIM1_Init();
   MX_TIM3_Init();
-  MX_TIM5_Init();
   /* USER CODE BEGIN 2 */
 
   init(&hcan2);
   gsense_init(&hcan2, &hadc1, NULL, NULL, &htim10, GSENSE_LED_GPIO_Port, GSENSE_LED_Pin);
-
+#ifdef USING_PUMP_PWM
   init_Pump(&htim5,TIM_CHANNEL_2);
+#endif
   init_DRS_servo(&htim2, TIM_CHANNEL_1);
   /* USER CODE END 2 */
 
@@ -539,55 +537,6 @@ static void MX_TIM3_Init(void)
 }
 
 /**
-  * @brief TIM5 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM5_Init(void)
-{
-
-  /* USER CODE BEGIN TIM5_Init 0 */
-
-  /* USER CODE END TIM5_Init 0 */
-
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
-  TIM_OC_InitTypeDef sConfigOC = {0};
-
-  /* USER CODE BEGIN TIM5_Init 1 */
-
-  /* USER CODE END TIM5_Init 1 */
-  htim5.Instance = TIM5;
-  htim5.Init.Prescaler = 250-1;
-  htim5.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim5.Init.Period = 31999;
-  htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim5.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_PWM_Init(&htim5) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim5, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 0;
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  if (HAL_TIM_PWM_ConfigChannel(&htim5, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM5_Init 2 */
-
-  /* USER CODE END TIM5_Init 2 */
-  HAL_TIM_MspPostInit(&htim5);
-
-}
-
-/**
   * @brief TIM10 Initialization Function
   * @param None
   * @retval None
@@ -688,7 +637,7 @@ static void MX_GPIO_Init(void)
                           |STATUS_B_Pin|MCU_AUX_2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, STATUS_R_Pin|STATUS_G_Pin|HARDFAULT_LED_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, STATUS_R_Pin|PUMP_PWM_Pin|STATUS_G_Pin|HARDFAULT_LED_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, RAD_FAN_Pin|AUX_GPIO_2_Pin|AUX_GPIO_1_Pin, GPIO_PIN_RESET);
@@ -705,8 +654,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : STATUS_R_Pin STATUS_G_Pin HARDFAULT_LED_Pin */
-  GPIO_InitStruct.Pin = STATUS_R_Pin|STATUS_G_Pin|HARDFAULT_LED_Pin;
+  /*Configure GPIO pins : STATUS_R_Pin PUMP_PWM_Pin STATUS_G_Pin HARDFAULT_LED_Pin */
+  GPIO_InitStruct.Pin = STATUS_R_Pin|PUMP_PWM_Pin|STATUS_G_Pin|HARDFAULT_LED_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;

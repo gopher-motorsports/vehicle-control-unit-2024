@@ -96,7 +96,7 @@
 #define HYSTERESIS_DIGITAL	      5.0f // Hysteresis when confined to digital signal (on/off)
 #define HYSTERESIS_ANALOG	      3.0f // Hysteresis when have PWM output signal (variable duty cycle)
 
-#define USING_PUMP_PWM
+//#define USING_PUMP_PWM
 #define PUMP_INTENSITY_OFF		  0  //0% duty cycle --> 0/31999
 #define PUMP_INTENSITY_1		  8000 //25% duty cycle --> 8000/31999
 #define PUMP_INTENSITY_2		  16000 //50% duty cycle --> 16000/31999
@@ -147,7 +147,7 @@
 #define APPS_MIN_ERROR_POS_mm 1.0f // position where the error begins
 //#define APPS_TOTAL_TRAVEL_mm ( APPS_MAX_CURRENT_POS_mm - APPS_MIN_CURRENT_POS_mm )
 
-#define USING_LAUNCH_CONTROL
+//#define USING_LAUNCH_CONTROL
 #define RPM_LAUNCH_CONTROL_THRESH			10
 #define STOPPED_TIME_THRESH					250
 #define MAX_LAUNCH_CONTROL_TORQUE_LIMIT	    50	   // 100 nm as max torque when in driving state
