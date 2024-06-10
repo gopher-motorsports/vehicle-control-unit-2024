@@ -637,7 +637,7 @@ static void MX_GPIO_Init(void)
                           |STATUS_B_Pin|MCU_AUX_2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, STATUS_R_Pin|PUMP_PWM_Pin|STATUS_G_Pin|HARDFAULT_LED_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, STATUS_R_Pin|PUMP_OUTPUT_Pin|STATUS_G_Pin|HARDFAULT_LED_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, RAD_FAN_Pin|AUX_GPIO_2_Pin|AUX_GPIO_1_Pin, GPIO_PIN_RESET);
@@ -654,8 +654,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : STATUS_R_Pin PUMP_PWM_Pin STATUS_G_Pin HARDFAULT_LED_Pin */
-  GPIO_InitStruct.Pin = STATUS_R_Pin|PUMP_PWM_Pin|STATUS_G_Pin|HARDFAULT_LED_Pin;
+  /*Configure GPIO pins : STATUS_R_Pin PUMP_OUTPUT_Pin STATUS_G_Pin HARDFAULT_LED_Pin */
+  GPIO_InitStruct.Pin = STATUS_R_Pin|PUMP_OUTPUT_Pin|STATUS_G_Pin|HARDFAULT_LED_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;

@@ -71,8 +71,8 @@ void Error_Handler(void);
 #define STATUS_B_GPIO_Port GPIOC
 #define STATUS_R_Pin GPIO_PIN_0
 #define STATUS_R_GPIO_Port GPIOA
-#define PUMP_PWM_Pin GPIO_PIN_1
-#define PUMP_PWM_GPIO_Port GPIOA
+#define PUMP_OUTPUT_Pin GPIO_PIN_1
+#define PUMP_OUTPUT_GPIO_Port GPIOA
 #define STATUS_G_Pin GPIO_PIN_2
 #define STATUS_G_GPIO_Port GPIOA
 #define CURR_FAULT_5V_Pin GPIO_PIN_4
