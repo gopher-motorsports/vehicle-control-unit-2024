@@ -21,22 +21,42 @@ uint32_t maxCurrent_mA = 0;
 uint32_t preDriveTimer_ms = 0;
 
 float desiredCurrent_A = 0;
-float maxcurrentLimit_A = 15;
+float maxcurrentLimit_A = 0;
 
+//float desiredTorque_Nm = 0;
 float torqueLimit_Nm = 0;
-float desiredTorque_Nm = 0;
+
+float motor_rpm;
 
 boolean appsBrakeLatched_state = 0;
 
 boolean Current_Fault_3V3_state = 0;
-boolean Current_Fault_5V5_state = 0;
+boolean Current_Fault_5V_state = 0;
 
 boolean readyToDriveButtonPressed_state = 0;
 
 VEHICLE_STATE_t vehicle_state = VEHICLE_NO_COMMS;
+boolean vehicle_currently_moving = 0;
+LAUNCH_CONTROL_STATES_t launch_control_state = LAUNCH_CONTROL_DISABLED;
 
-TIM_HandleTypeDef* PWM_Timer;
+//Cooling variables
+
+//Fan
+boolean steady_temperatures_achieved_fan[] = {true, true}; //LOT if fan temperatures have returned to steady state, implemented to stop double counting
+U8 fan_readings_below_HYS_threshold = 0;
+U8 rad_fan_state = RAD_FAN_OFF;
+
+//Pump
+TIM_HandleTypeDef* PUMP_PWM_Timer;
 U32 PUMP_Channel;
+
+boolean steady_temperatures_achieved_pump[] = {true, true}; //LOT if pump temperatures have returned to ready state
+U8 pump_readings_below_HYS_threshold = 0;
+U16 pwm_pump_intensity = PUMP_INTENSITY_OFF;
+
+U8 digital_pump_state = 0; //if no pump pwm and just digital
+
+
 
 #define HBEAT_LED_DELAY_TIME_ms 500
 #define RTD_DEBOUNCE_TIME_ms 25
@@ -54,11 +74,12 @@ void main_loop() {
 	process_sensors();
 	process_inverter();
 	update_outputs();
-	//update_cooling();
+	update_cooling();
 	update_display_fault_status();
 	update_gcan_states(); // Should be after process_sensors
 	LED_task();
 	set_DRS_Servo_Position(FALSE);
+	vehicle_currently_moving = isVehicleMoving();
 }
 
 /**
@@ -92,7 +113,7 @@ void update_gcan_states() {
 	}
 	update_and_queue_param_float(&pedalPosition1_percent, pedalPos1);
 	update_and_queue_param_float(&pedalPosition2_percent, pedalPos2);
-	// Log BSPD sensor faults
+	// Log BSPD out of range sensor faults
 	update_and_queue_param_u8(&bspdBrakePressureSensorFault_state,
 			HAL_GPIO_ReadPin(BSPD_BRK_FAULT_GPIO_Port, BSPD_BRK_FAULT_Pin) == BSPD_BRAKE_FAULT);
 	update_and_queue_param_u8(&bspdTractiveSystemCurrentSensorFault_state,
@@ -100,68 +121,81 @@ void update_gcan_states() {
 	// Log BSPD current/braking fault
 	update_and_queue_param_u8(&bspdTractiveSystemBrakingFault_state,
 			HAL_GPIO_ReadPin(BSPD_TS_BRK_FAULT_GPIO_Port, BSPD_TS_BRK_FAULT_Pin) == BSPD_TS_BRK_FAULT);
-	// VSC sensors faults, out of range checks
+
+	// VCU software sensors faults, out of range checks
 	update_and_queue_param_u8(&vcuPedalPosition1Fault_state, TIMED_SOFTWARE_FAULTS[0]->state);
 	update_and_queue_param_u8(&vcuPedalPosition2Fault_state, TIMED_SOFTWARE_FAULTS[1]->state);
 	update_and_queue_param_u8(&vcuBrakePressureSensorFault_state, TIMED_SOFTWARE_FAULTS[2]->state);
 	update_and_queue_param_u8(&vcuTractiveSystemCurrentSensorFault_state, TIMED_SOFTWARE_FAULTS[3]->state);
-	// VSC safety checks, correlation and APPS/Brake Plausibility check
+	// VCU software safety checks, correlation and APPS/Brake Plausibility check
 	update_and_queue_param_u8(&vcuPedalPositionCorrelationFault_state, TIMED_SOFTWARE_FAULTS[4]->state);
 	update_and_queue_param_u8(&vcuPedalPositionBrakingFault_state, appsBrakeLatched_state);
-	// Requested torque
-	update_and_queue_param_float(&vcuTorqueRequested_Nm, desiredTorque_Nm);
+
+	//current requested amps and max amps for DTI Inverter
+	update_and_queue_param_float(&vcuCurrentRequested_A, desiredCurrent_A);
+	update_and_queue_param_float(&vcuMaxCurrentLimit_A, maxcurrentLimit_A );
 	// Cooling
-	update_and_queue_param_u8(&coolantFanPower_percent, 100*HAL_GPIO_ReadPin(RAD_FAN_GPIO_Port, RAD_FAN_Pin));
-	//update_and_queue_param_u8(&coolantPumpPower_percent, 100*HAL_GPIO_ReadPin(PUMP_GPIO_Port, PUMP_Pin)); //TODO change to duty cycle percent
+	update_and_queue_param_u8(&coolantFanPower_percent, rad_fan_state);
+	update_and_queue_param_u8(&coolantPumpPower_percent, (pwm_pump_intensity/32000) * 100); //calculate duty cycle percent
 	// Vehicle state
 	update_and_queue_param_u8(&vehicleState_state, vehicle_state);
 	update_and_queue_param_u8(&readyToDriveButton_state, readyToDriveButtonPressed_state);
 
 	update_and_queue_param_u8(&vcuGSenseStatus_state, HAL_GPIO_ReadPin(GSENSE_LED_GPIO_Port, GSENSE_LED_Pin));
-	// Calculate wheel speed from rpm
-	wheelSpeedRearRight_mph.data = ((motorSpeed_rpm.data * MINUTES_PER_HOUR) * WHEEL_DIAMETER_IN * MATH_PI) / (FINAL_DRIVE_RATIO * IN_PER_FT);
+	// Calculate wheel speed from rpm, change rpm to
+	motor_rpm = electricalRPM_erpm.data * MOTOR_POLE_PAIRS;
+	wheelSpeedRearRight_mph.data = ((motor_rpm * MINUTES_PER_HOUR) * WHEEL_DIAMETER_IN * MATH_PI) / (FINAL_DRIVE_RATIO * IN_PER_FT);
 	wheelSpeedFrontLeft_mph.data = wheelSpeedFrontRight_mph.data;
 }
 
+void init_Pump(TIM_HandleTypeDef* timer_address, U32 channel){
+	PUMP_PWM_Timer = timer_address;
+	PUMP_Channel = channel;
+	HAL_TIM_PWM_Start(PUMP_PWM_Timer, PUMP_Channel); //turn on PWM generation
+}
+
 void update_cooling() {
-	// TODO: Ramp up cooling based on temperatures of the inverter and motor using PWM
-	// TODO: Set pump and fan pins to PWM
-	//change controlBoardTEMP_C to
-    double temp_readings[] = {controlBoardTemp_C. data, motorTemp_C.data};
+
+    double temp_readings[] = {ControllerTemp_C.data, motorTemp_C.data};
 	static double cooling_thresholds[] = {INVERTER_TEMP_THRESH_C, MOTOR_TEMP_THRESH_C};
-	double total_cooling_thresholds = sizeof(cooling_thresholds) / sizeof(cooling_thresholds[0]); //amount of cooling thresholds
-	static U8 rad_fan_state = PLM_CONTROL_OFF;
-	static U16 pwm_pump_intensity = PUMP_INTENSITY_OFF;
-	int readings_below_HYS_threshold = 0;
+	static int total_cooling_thresholds = sizeof(cooling_thresholds) / sizeof(cooling_thresholds[0]); //amount of cooling thresholds
+
 
 	//rad fan cooling
 	for(int i = 0; i < total_cooling_thresholds; i++){
-		if(rad_fan_state == PLM_CONTROL_OFF && (temp_readings[i] >= (cooling_thresholds[i] + HYSTERESIS_DIGITAL))){
-			rad_fan_state = PLM_CONTROL_ON;
-			HAL_GPIO_WritePin(RAD_FAN_GPIO_Port, RAD_FAN_Pin, rad_fan_state);
-			readings_below_HYS_threshold = 0;
-			break;
+		if(rad_fan_state == RAD_FAN_OFF && (temp_readings[i] >= (cooling_thresholds[i] + HYSTERESIS_DIGITAL))){
+			rad_fan_state = RAD_FAN_ON;
+
+			//set both controller and motortemp to unstable if either are too high(for ease of implementation)
+			for(int j = 0; j < total_cooling_thresholds; j++)
+				steady_temperatures_achieved_fan[j] = false;
+			fan_readings_below_HYS_threshold = 0;
+
+			break; //if an early temperature trips it, no need to check the rest of them
 		}
 
-		else if(rad_fan_state == PLM_CONTROL_ON){
-			if(temp_readings[i] <= (cooling_thresholds[i] - HYSTERESIS_DIGITAL)){
-				readings_below_HYS_threshold++;
+		else if(rad_fan_state == RAD_FAN_ON){
+			if(steady_temperatures_achieved_fan[i] == false && (temp_readings[i] <= (cooling_thresholds[i] - HYSTERESIS_DIGITAL))){
+				fan_readings_below_HYS_threshold++;
+				steady_temperatures_achieved_fan[i] = true;
 			}
 
-			if(readings_below_HYS_threshold == total_cooling_thresholds){
-				rad_fan_state = PLM_CONTROL_OFF;
-				HAL_GPIO_WritePin(RAD_FAN_GPIO_Port, RAD_FAN_Pin, rad_fan_state);
-			}
+			if(fan_readings_below_HYS_threshold == total_cooling_thresholds)
+				rad_fan_state = RAD_FAN_OFF;
 		}
 	}
 
+	HAL_GPIO_WritePin(RAD_FAN_GPIO_Port, RAD_FAN_Pin, rad_fan_state);
+
 	//pump cooling
+#ifdef USING_PUMP_PWM
 	for(int i = 0; i < total_cooling_thresholds; i++){
 		if(pwm_pump_intensity == PUMP_INTENSITY_OFF && (temp_readings[i] >= (cooling_thresholds[i] + HYSTERESIS_ANALOG))){
 			pwm_pump_intensity = PUMP_INTENSITY_1;
-			__HAL_TIM_SET_COMPARE(PWM_Timer, PUMP_Channel, pwm_pump_intensity);
-			HAL_TIM_PWM_Start(PWM_Timer, PUMP_Channel);
-			readings_below_HYS_threshold = 0;
+
+			for(int j = 0; j < total_cooling_thresholds; j++)
+				steady_temperatures_achieved_pump[j] = false;
+			pump_readings_below_HYS_threshold = 0;
 			break;
 		}
 
@@ -170,17 +204,45 @@ void update_cooling() {
 			else if(temp_readings[i] >= INVERTER_TEMP_THRESH_C_3 || temp_readings[i] >= MOTOR_TEMP_THRESH_C_3) pwm_pump_intensity = PUMP_INTENSITY_3;
 			else if(temp_readings[i] >= INVERTER_TEMP_THRESH_C_2 || temp_readings[i] >= MOTOR_TEMP_THRESH_C_2) pwm_pump_intensity = PUMP_INTENSITY_2;
 			else if(temp_readings[i] >= INVERTER_TEMP_THRESH_C_1 || temp_readings[i] >= MOTOR_TEMP_THRESH_C_1) pwm_pump_intensity = PUMP_INTENSITY_1;
-			else if(temp_readings[i] <= (cooling_thresholds[i] - HYSTERESIS_ANALOG)){
-				readings_below_HYS_threshold++;
+			else if(steady_temperatures_achieved_pump[i] == false && (temp_readings[i] <= (cooling_thresholds[i] - HYSTERESIS_ANALOG))){
+				pump_readings_below_HYS_threshold++;
+				steady_temperatures_achieved_pump[i] = true;
 			}
 
-			if(readings_below_HYS_threshold == total_cooling_thresholds){
+			if(pump_readings_below_HYS_threshold == total_cooling_thresholds){
 				pwm_pump_intensity = PUMP_INTENSITY_OFF;
-				HAL_TIM_PWM_Stop(PWM_Timer, PUMP_Channel);
 			}
-			__HAL_TIM_SET_COMPARE(PWM_Timer, PUMP_Channel, pwm_pump_intensity);
 		}
 	}
+
+	__HAL_TIM_SET_COMPARE(PUMP_PWM_Timer, PUMP_Channel, pwm_pump_intensity);
+#else
+	for(int i = 0; i < total_cooling_thresholds; i++){
+			if(digital_pump_state == PUMP_DIGITAL_OFF && (temp_readings[i] >= (cooling_thresholds[i] + HYSTERESIS_DIGITAL))){
+				digital_pump_state = PUMP_DIGITAL_ON;
+
+				//set both controller and motortemp to unstable if either are too high(for ease of implementation)
+				for(int j = 0; j < total_cooling_thresholds; j++)
+					steady_temperatures_achieved_pump[j] = false;
+				pump_readings_below_HYS_threshold = 0;
+
+				break; //if an early temperature trips it, no need to check the rest of them
+			}
+
+			else if(digital_pump_state == PUMP_DIGITAL_ON){
+				if(steady_temperatures_achieved_pump[i] == false && (temp_readings[i] <= (cooling_thresholds[i] - HYSTERESIS_DIGITAL))){
+					pump_readings_below_HYS_threshold++;
+					steady_temperatures_achieved_pump[i] = true;
+				}
+
+				if(pump_readings_below_HYS_threshold == total_cooling_thresholds)
+					digital_pump_state = PUMP_DIGITAL_OFF;
+			}
+		}
+
+		HAL_GPIO_WritePin(RAD_FAN_GPIO_Port, RAD_FAN_Pin, rad_fan_state);
+#endif
+
 }
 
 void process_sensors() {
@@ -215,7 +277,7 @@ void process_sensors() {
 		}
 	}
 
-	desiredCurrent_A = MAX_TEST_CMD_CURRENT_A;
+	maxcurrentLimit_A = MAX_TEST_CMD_CURRENT_A;
 
 
 	update_struct_fault_data(); //refresh sensor data
@@ -236,7 +298,7 @@ void process_sensors() {
 
 		if(fault->fault_timer > fault->input_delay_threshold){
 			fault->state = true;
-			torqueLimit_Nm = 0;
+			maxcurrentLimit_A = 0;
 		}
 	}
 
@@ -249,30 +311,45 @@ void process_sensors() {
 	}
 
 	if(appsBrakeLatched_state) {
-		torqueLimit_Nm = 0;
+		maxcurrentLimit_A = 0;
 	}
 
 	//Sensor overcurrent Logic, turn off power to inverter if any of the sensor power lines are overcurrenting
-	Current_Fault_3V3_state = HAL_GPIO_ReadPin(RTD_BUTTON_GPIO_Port, RTD_BUTTON_Pin) == SENSOR_OVERCURRENT_TRIPPED; //active low
-	Current_Fault_5V5_state = HAL_GPIO_ReadPin(RTD_BUTTON_GPIO_Port, RTD_BUTTON_Pin) == SENSOR_OVERCURRENT_TRIPPED; //active low
-	if(Current_Fault_3V3_state || Current_Fault_5V5_state){
-		torqueLimit_Nm = 0;
+	Current_Fault_3V3_state = HAL_GPIO_ReadPin(CURR_FAULT_3V3_GPIO_Port, CURR_FAULT_3V3_Pin) == SENSOR_OVERCURRENT_TRIPPED; //active low
+	Current_Fault_5V_state  = HAL_GPIO_ReadPin(CURR_FAULT_5V_GPIO_Port, CURR_FAULT_5V_Pin) == SENSOR_OVERCURRENT_TRIPPED; //active low
+
+	static U32 overcurrent_event_timer_3V3 = 0;
+	static U32 overcurrent_event_timer_5V = 0;
+
+	if(Current_Fault_3V3_state){
+		overcurrent_event_timer_3V3++;
+		if(overcurrent_event_timer_3V3 >= SENSOR_OVERCURRENT_TIME_THRESH)
+			maxcurrentLimit_A = 0;
+	}
+	else{
+		overcurrent_event_timer_3V3 = 0;
+	}
+
+	if(Current_Fault_5V_state){
+		overcurrent_event_timer_5V++;
+		if(overcurrent_event_timer_5V >= SENSOR_OVERCURRENT_TIME_THRESH)
+			maxcurrentLimit_A = 0;
+	}
+	else{
+		overcurrent_event_timer_5V = 0;
 	}
 
 	// TODO make some hysteresis on this in order to make it less jumpy
 	if(bspdTractiveSystemBrakingFault_state.data) {
-		float tractiveSystemBrakingLimit_Nm = 0;
-		float accumulatorVoltage_V = dcBusVoltage_V.data;
-		if(motorSpeed_rpm.data != 0) {
-			// Calculate max torque from speed and voltage, using angular velocity (rad/s)
-			tractiveSystemBrakingLimit_Nm = (BRAKE_TS_CURRENT_THRESH_A * accumulatorVoltage_V) //stay below 5kw, when driver breaking hard
-					/ ((motorSpeed_rpm.data * MATH_TAU) / SECONDS_PER_MIN);
+		float tractiveSystemBrakingLimit_A = 0;
+		if(motor_rpm != 0) {
+			tractiveSystemBrakingLimit_A = BSPD_POWER_LIMIT / inputInverterVoltage_V.data; //stay below 5 kW I = P/V
 		}
 		// If the tractive system braking limit is less (more restrictive),
 		// then set the torque limit to that amount
-		if(tractiveSystemBrakingLimit_Nm < torqueLimit_Nm) {
+		if(tractiveSystemBrakingLimit_A < maxcurrentLimit_A) {
 			update_and_queue_param_u8(&vcuBrakingClampingCurrent_state, TRUE);
-			torqueLimit_Nm = tractiveSystemBrakingLimit_Nm;
+			maxcurrentLimit_A = tractiveSystemBrakingLimit_A;
 		} else {
 			update_and_queue_param_u8(&vcuBrakingClampingCurrent_state, FALSE);
 		}
@@ -294,17 +371,17 @@ void process_sensors() {
 void update_display_fault_status() {
 	int status = NONE;
 	if(amsFault_state.data) status = AMS_FAULT;
+	else if (vehicle_state == VEHICLE_FAULT) status = INVERTER_FAULT;
 	else if(bmsNumActiveAlerts_state.data) status = BMS_FAULT;
 	else if(vcuPedalPositionBrakingFault_state.data) status = RELEASE_PEDAL;
 	else if(bspdTractiveSystemBrakingFault_state.data || vcuBrakingClampingCurrent_state.data) status = BRAKING_FAULT;
 	else if(vcuPedalPositionCorrelationFault_state.data) status = APPS_FAULT;
 	else if(bspdFault_state.data
 			|| bspdBrakePressureSensorFault_state.data
-			|| bspdPedalPosition1Fault_state.data
-			|| bspdPedalPosition2Fault_state.data
 			|| bspdTractiveSystemCurrentSensorFault_state.data
 			) status = BSPD_FAULT;
 	else if(vcuBrakePressureSensorFault_state.data
+			|| vcuPedalPosition1Fault_state.data
 			|| vcuPedalPosition2Fault_state.data
 			|| vcuTractiveSystemCurrentSensorFault_state.data
 			) status = VCU_FAULT;
@@ -312,21 +389,12 @@ void update_display_fault_status() {
 	update_and_queue_param_u8(&displayFaultStatus_state, status);
 }
 
-void simplified_process_inverter(){
-
-}
-/*
-uint8_t test_state = 0;
-uint16_t desired_test_current = 0;
-uint16_t max_test_limit = 0;*/
-
 void process_inverter() {
 	U8 inverter_enable_state = INVERTER_DISABLE;
-	/*
+
 	if(faultCode.data != 0x00) {
-		//send
 		vehicle_state = VEHICLE_FAULT;
-	}*/
+	}
 
 	switch (vehicle_state)
 	{
@@ -340,9 +408,8 @@ void process_inverter() {
 		break;
 
 	case VEHICLE_FAULT:
-		// try and exit the lockout mode of the inverter. This will be present whenever there is a fault
+		//check to see if fault goes away
 		if(faultCode.data == 0x00) {
-			//do nothing, see if the fault goes away
 			vehicle_state = VEHICLE_NO_COMMS;
 		}
 		SET_INV_DISABLED();
@@ -370,8 +437,10 @@ void process_inverter() {
 		break;
 
 	case VEHICLE_DRIVING:
-		// let the car run as normal. Do not change desiredTorque
-		//limit_motor_torque();
+		// vehcile in driving state
+#ifdef USING_LAUNCH_CONTROL
+		launch_control_sm();
+#endif
 		inverter_enable_state = INVERTER_ENABLE;
 		break;
 
@@ -386,10 +455,6 @@ void process_inverter() {
 	maxCurrentLimitPeakToPeak_A.data = maxcurrentLimit_A;
 	driveEnable_state.data = inverter_enable_state;
 
-	/*desiredInvCurrentPeakToPeak_A.data = desired_test_current;
-	maxCurrentLimitPeakToPeak_A.data = max_test_limit;
-	driveEnable_state.data = test_state;*/
-
 	send_group(INVERTER_SET_CURRENT_AC_CMD_ID);
 	send_group(INVERTER_MAX_CURRENT_AC_LIMIT_CMD_ID);
 	send_group(INVERTER_DRIVE_ENABLE_CMD_ID);
@@ -397,19 +462,51 @@ void process_inverter() {
 }
 
 
-void limit_motor_torque()
-{
-	// TODO this is where all the fun launch and traction control will go
+boolean isVehicleMoving() {
+    static U32 vehicle_state_timer = 0;
 
-	float new_torque_limit;
-	// right now we just want to limit torque based on back EMF to keep our
-	// current under 100A at the accumulator
-	if (motorSpeed_rpm.data > MIN_LIMIT_SPEED_rpm)
-	{
-		new_torque_limit = (TS_CURRENT_MAX_A * dcBusVoltage_V.data) / ((motorSpeed_rpm.data * MATH_TAU) / SECONDS_PER_MIN); //limit to 80Kw of power
-	}
-	if (new_torque_limit < torqueCmdLim_Nm.data) torqueCmdLim_Nm.data = new_torque_limit;
+    if (motor_rpm < RPM_LAUNCH_CONTROL_THRESH) {
+    	vehicle_state_timer++;
+        if(vehicle_state_timer > STOPPED_TIME_THRESH)
+        	vehicle_state_timer = STOPPED_TIME_THRESH + 1;
+
+    } else {
+        vehicle_state_timer = 0; // Reset the timer
+        return TRUE; // Vehicle is moving
+    }
+
+    if(vehicle_state_timer > STOPPED_TIME_THRESH){
+        return FALSE;
+    }
+
+    return TRUE;
 }
+
+
+void launch_control_sm(){
+	switch(launch_control_state){
+	case LAUNCH_CONTROL_DISABLED:
+		if(!vehicle_currently_moving)
+			launch_control_state = LAUNCH_CONTROL_ENABLED;
+		break;
+	case LAUNCH_CONTROL_ENABLED:
+		float new_current_limit;
+		if (motor_rpm < MIN_LIMIT_SPEED_rpm)
+		{
+			//rearrange power = toruqe * rpm for current --> I = (torque*rpm) /V
+			new_current_limit = (MAX_LAUNCH_CONTROL_TORQUE_LIMIT * ((motor_rpm * MATH_TAU) / SECONDS_PER_MIN) ) / inputInverterVoltage_V.data;
+		}
+		else{
+			launch_control_state = LAUNCH_CONTROL_DISABLED;
+			break;
+		}
+		if (new_current_limit < maxcurrentLimit_A) maxcurrentLimit_A = new_current_limit;
+
+		break;
+	}
+}
+
+
 
 
 void update_outputs() {
@@ -443,6 +540,5 @@ void LED_task(){
 	HAL_GPIO_WritePin(STATUS_G_GPIO_Port, STATUS_G_Pin, SET);
 	HAL_GPIO_WritePin(STATUS_B_GPIO_Port, STATUS_B_Pin, SET);
 }
-
 
 // End of vcu.c

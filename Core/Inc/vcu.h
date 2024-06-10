@@ -82,29 +82,34 @@
 
 // ====================================== COOLING PARAMETERS ====================================
 #define INVERTER_TEMP_THRESH_C    40.0f // Minimum Inverter temp threshold for cooling fan to turn on
-#define INVERTER_TEMP_THRESH_C_1  45.0f //Inverter temp threshold + HYS + 3.0C
-#define INVERTER_TEMP_THRESH_C_2  48.0f //Inverter temp threshold + HYS + 6.0C
-#define INVERTER_TEMP_THRESH_C_3  51.0f //Inverter temp threshold + HYS + 8.0C
-#define INVERTER_TEMP_THRESH_C_4  54.0f //Inverter temp threshold + HYS + 11.0C
+#define INVERTER_TEMP_THRESH_C_1  43.0f //Inverter temp threshold + HYS_ANALOG * 1
+#define INVERTER_TEMP_THRESH_C_2  46.0f //Inverter temp threshold + HYS_ANALOG * 2
+#define INVERTER_TEMP_THRESH_C_3  49.0f //Inverter temp threshold + HYS_ANALOG * 3
+#define INVERTER_TEMP_THRESH_C_4  52.0f //Inverter temp threshold + HYS_ANALOG * 4
 
 #define MOTOR_TEMP_THRESH_C       50.0f // Minimum Motor temperature for cooling fan to turn on
-#define MOTOR_TEMP_THRESH_C_1     55.0f //Motor temp threshold + HYS + 3.0C
-#define MOTOR_TEMP_THRESH_C_2     58.0f //Motor temp threshold + HYS + 6.0C
-#define MOTOR_TEMP_THRESH_C_3     61.0f //Motor temp threshold + HYS + 8.0C
-#define MOTOR_TEMP_THRESH_C_4     64.0f //Motor temp threshold + HYS + 11.0C
+#define MOTOR_TEMP_THRESH_C_1     53.0f //Motor temp threshold + HYS_ANALOG * 1
+#define MOTOR_TEMP_THRESH_C_2     56.0f //Motor temp threshold + HYS_ANALOG * 2
+#define MOTOR_TEMP_THRESH_C_3     59.0f //Motor temp threshold + HYS_ANALOG * 3
+#define MOTOR_TEMP_THRESH_C_4     62.0f //Motor temp threshold + HYS_ANALOG * 4
 
 #define HYSTERESIS_DIGITAL	      5.0f // Hysteresis when confined to digital signal (on/off)
-#define HYSTERESIS_ANALOG	      2.0f // Hysteresis when have PWM output signal (variable duty cycle)
+#define HYSTERESIS_ANALOG	      3.0f // Hysteresis when have PWM output signal (variable duty cycle)
 
-#define PUMP_INTENSITY_OFF		  0  //0% duty cycle --> 0/1600
-#define PUMP_INTENSITY_1		  400 //25% duty cycle --> 400/1600
-#define PUMP_INTENSITY_2		  800 //50% duty cycle --> 800/1600
-#define PUMP_INTENSITY_3		  1200 //75% duty cycle --> 1200/1600
-#define PUMP_INTENSITY_4		  1600 //100% duty cycle --> 1600/1600
+#define USING_PUMP_PWM
+#define PUMP_INTENSITY_OFF		  0  //0% duty cycle --> 0/31999
+#define PUMP_INTENSITY_1		  8000 //25% duty cycle --> 8000/31999
+#define PUMP_INTENSITY_2		  16000 //50% duty cycle --> 16000/31999
+#define PUMP_INTENSITY_3		  24000 //75% duty cycle --> 24000/31999
+#define PUMP_INTENSITY_4		  31999 //100% duty cycle --> 31999/31999
+
+#define PUMP_DIGITAL_ON			  1
+#define PUMP_DIGITAL_OFF 		  0
 // ==============================================================================================
 
 // =============================== SENSOR OVERCURRENT PARAMETERS ================================
 #define SENSOR_OVERCURRENT_TRIPPED      (GPIO_PIN_RESET)
+#define SENSOR_OVERCURRENT_TIME_THRESH 	5
 
 // ================================== TRACTIVE SYSTEM PARAMETERS 2023 ================================
 #define MOTOR_DIRECTION         1      // Motor direction; 0 is reverse, 1 is forward
@@ -123,7 +128,8 @@
 #define PARAM_CMD_RESERVED2     0x0000 // Reserved value in inverter parameter
 #define FINAL_DRIVE_RATIO       4.363  // The final drive ratio
 #define WHEEL_DIAMETER_IN       10     // Wheel diameter
-
+#define MOTOR_POLE_PAIRS   		10 	   // Amount of Pole Pairs of the EMRAX Motor
+#define BSPD_POWER_LIMIT		4000   // 5 kW limit before a car shutdown is required, 4 kW with buffer
 
 // ==============================================================================================
 
@@ -131,19 +137,28 @@
 #define INVERTER_DRIVE_ENABLE_CMD_ID         0x18E  // The CAN ID for Drive Enable Command
 #define INVERTER_MAX_CURRENT_AC_LIMIT_CMD_ID 0x10E  // The CAN ID for Setting Max Current Limit
 #define INVERTER_SET_CURRENT_AC_CMD_ID     	 0x02E  // The CAN ID for Setting Desired Inverter Current
-#define MAX_TEST_CMD_CURRENT_A    			 200  // The maximum current that will be commanded
+#define MAX_TEST_CMD_CURRENT_A    			 550  // The maximum current that will be commanded
 #define DRIVE_ENABLE_INVERTER_TIMEOUT		 200 //Inverter Timeout if
+#define VEHICLE_STOPPED_THRESHOLD			 1000 //If vehicle is stopped for 1 sec
 
 #define APPS_MAX_CURRENT_POS_mm  20.0f // The position of the pedal at 100% torque
 #define APPS_MIN_CURRENT_POS_mm  10.0f  // The position of the pedal at 0% torque
 #define APPS_MAX_ERROR_POS_mm 24.0f // position where the error begins
 #define APPS_MIN_ERROR_POS_mm 1.0f // position where the error begins
 //#define APPS_TOTAL_TRAVEL_mm ( APPS_MAX_CURRENT_POS_mm - APPS_MIN_CURRENT_POS_mm )
+
+#define USING_LAUNCH_CONTROL
+#define RPM_LAUNCH_CONTROL_THRESH			10
+#define STOPPED_TIME_THRESH					250
+#define MAX_LAUNCH_CONTROL_TORQUE_LIMIT	    50	   // 100 nm as max torque when in driving state
+
 // ======================================== I/O PARAMETERS ======================================
 #define MOSFET_PULL_DOWN_ON (GPIO_PIN_SET)
 #define MOSFET_PULL_DOWN_OFF (GPIO_PIN_RESET)
 #define PLM_CONTROL_ON (GPIO_PIN_RESET)
 #define PLM_CONTROL_OFF (GPIO_PIN_SET)
+#define RAD_FAN_ON (GPIO_PIN_SET)
+#define RAD_FAN_OFF (GPIO_PIN_RESET)
 // ==============================================================================================
 
 // ======================================= BSPD PARAMETERS ======================================
@@ -172,6 +187,13 @@ typedef enum
 	VEHICLE_DRIVING   = 4, // Torque commands are actively being sent from APPS positions
 } VEHICLE_STATE_t;
 
+typedef enum
+{
+	LAUNCH_CONTROL_DISABLED,
+	LAUNCH_CONTROL_ENABLED
+
+
+} LAUNCH_CONTROL_STATES_t;
 typedef enum {
 	NONE = 0,
 	RELEASE_PEDAL,
@@ -181,7 +203,8 @@ typedef enum {
 	AMS_FAULT,
 	IMD_FAULT,
 	VCU_FAULT,
-	BMS_FAULT
+	BMS_FAULT,
+	INVERTER_FAULT
 } DISPLAY_FAULT_STATUS_t;
 
 extern VEHICLE_STATE_t vehicle_state;
@@ -201,4 +224,7 @@ void limit_motor_torque();
 void LED_task();
 void pass_on_timer_info(); //this is def not the best way to do this
 void set_DRS_Servo_Position(U8 start_up_condition);
+void init_Pump(TIM_HandleTypeDef* timer_address, U32 channel);
+void launch_control_sm();
+boolean isVehicleMoving();
 #endif /* INC_VCU_H_ */

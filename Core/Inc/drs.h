@@ -35,6 +35,7 @@
 
 #define OPEN_POS 18959 //63.2% duty cycle
 #define CLOSED_POS 25660 //86.4% duty cycle
+#define DRS_SHUTDOWN_CHECKS
 
 //constants for smart shutoff when cornering
 #define BRAKE_SHUTOFF_THRESHOLD 25 //10 psi

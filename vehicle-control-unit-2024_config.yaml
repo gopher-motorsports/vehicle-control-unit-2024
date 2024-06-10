@@ -47,14 +47,6 @@ buckets:
                 ADC: NON_ADC
                 sensor: NON_ADC
                 samples_buffered: 1
-            # bspdPedalPosition1Fault_state: doesn't exist in hardware anymore
-            #     ADC: NON_ADC
-            #     sensor: NON_ADC
-            #     samples_buffered: 1
-            # bspdPedalPosition2Fault_state:
-            #     ADC: NON_ADC
-            #     sensor: NON_ADC
-            #     samples_buffered: 1
             bspdTractiveSystemCurrentSensorFault_state:
                 ADC: NON_ADC
                 sensor: NON_ADC
@@ -97,11 +89,14 @@ buckets:
             
             
             # Other parameters
-            vcuTorqueRequested_Nm:
+            vcuCurrentRequested_A:
                 ADC: NON_ADC
                 sensor: NON_ADC
                 samples_buffered: 1
-
+            vcuMaxCurrentLimit_A:
+                ADC: NON_ADC
+                sensor: NON_ADC
+                samples_buffered: 1
             coolantFanPower_percent:
                 ADC: NON_ADC
                 sensor: NON_ADC
