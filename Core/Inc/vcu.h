@@ -69,7 +69,7 @@
 
 // ------------------------------------ APPS Correlation Check ----------------------------------
 #define APPS_CORRELATION_THRESH_mm   ( APPS_TOTAL_TRAVEL_mm * 0.1 )
-#define CORRELATION_TRIP_DELAY_ms    100  // The amount of time it takes a correlation fault to take effect
+#define CORRELATION_TRIP_DELAY_ms    85  // The amount of time it takes a correlation fault to take effect
 #define APPS_CORRELATION_OFFSET_mm   0.0  // The average offset of the APPSs, positive is APPS1 > APPS2
 
 // ------------------------------------ TS Current/Brake Check ----------------------------------
