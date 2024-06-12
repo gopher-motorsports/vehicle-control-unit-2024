@@ -110,6 +110,7 @@
 // =============================== SENSOR OVERCURRENT PARAMETERS ================================
 #define SENSOR_OVERCURRENT_TRIPPED      (GPIO_PIN_RESET)
 #define SENSOR_OVERCURRENT_TIME_THRESH 	5
+//#define USING_SOFTWARE_OVERCURRENT_PROT
 
 // ================================== TRACTIVE SYSTEM PARAMETERS 2023 ================================
 #define MOTOR_DIRECTION         1      // Motor direction; 0 is reverse, 1 is forward

@@ -320,6 +320,7 @@ void process_sensors() {
 	}
 
 	//Sensor overcurrent Logic, turn off power to inverter if any of the sensor power lines are overcurrenting
+#ifdef USING_SOFTWARE_OVERCURRENT_PROT
 	Current_Fault_3V3_state = HAL_GPIO_ReadPin(CURR_FAULT_3V3_GPIO_Port, CURR_FAULT_3V3_Pin) == SENSOR_OVERCURRENT_TRIPPED; //active low
 	Current_Fault_5V_state  = HAL_GPIO_ReadPin(CURR_FAULT_5V_GPIO_Port, CURR_FAULT_5V_Pin) == SENSOR_OVERCURRENT_TRIPPED; //active low
 
@@ -343,7 +344,7 @@ void process_sensors() {
 	else{
 		overcurrent_event_timer_5V = 0;
 	}
-
+#endif
 	// TODO make some hysteresis on this in order to make it less jumpy
 	if(bspdTractiveSystemBrakingFault_state.data) {
 		float tractiveSystemBrakingLimit_A = 0;
@@ -496,7 +497,7 @@ void launch_control_sm(){
 		break;
 	case LAUNCH_CONTROL_ENABLED:
 		float new_current_limit;
-		if (motor_rpm < MIN_LIMIT_SPEED_rpm)
+		if ((motor_rpm < MIN_LIMIT_SPEED_rpm) && (inputInverterVoltage_V.data != 0))
 		{
 			//rearrange power = toruqe * rpm for current --> I = (torque*rpm) /V
 			new_current_limit = (MAX_LAUNCH_CONTROL_TORQUE_LIMIT * ((motor_rpm * MATH_TAU) / SECONDS_PER_MIN) ) / inputInverterVoltage_V.data;
