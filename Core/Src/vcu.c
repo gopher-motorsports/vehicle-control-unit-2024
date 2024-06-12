@@ -348,7 +348,7 @@ void process_sensors() {
 	// TODO make some hysteresis on this in order to make it less jumpy
 	if(bspdTractiveSystemBrakingFault_state.data) {
 		float tractiveSystemBrakingLimit_A = 0;
-		if(motor_rpm != 0) {
+		if(inputInverterVoltage_V.data != 0) {
 			tractiveSystemBrakingLimit_A = BSPD_POWER_LIMIT / inputInverterVoltage_V.data; //stay below 5 kW I = P/V
 		}
 		// If the tractive system braking limit is less (more restrictive),
