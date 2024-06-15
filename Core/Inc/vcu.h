@@ -28,11 +28,20 @@
 #define TIM2_PWM_MAX	1600 //value where max overflow happens, defined in IOC in timer config
 
 // ======================================= APPS PARAMETERS ======================================
-#define APPS_MAX_TORQUE_POS_mm  20.0f // The position of the pedal at 100% torque
-#define APPS_MIN_TORQUE_POS_mm  10.0f  // The position of the pedal at 0% torque
-#define APPS_MAX_ERROR_POS_mm 24.0f // position where the error begins
-#define APPS_MIN_ERROR_POS_mm 1.0f // position where the error begins
-#define APPS_TOTAL_TRAVEL_mm ( APPS_MAX_TORQUE_POS_mm - APPS_MIN_TORQUE_POS_mm )
+#define APPS_MAX_TORQUE_POS_mm  21.5f // The position of the pedal at 100% torque
+#define APPS_MIN_TORQUE_POS_mm  2.5f  // The position of the pedal at 0% torque
+//#define APPS_MAX_ERROR_POS_mm 24.0f // position where the error begins
+//#define APPS_MIN_ERROR_POS_mm 1.0f // position where the error begins
+//#define APPS_TOTAL_TRAVEL_mm ( APPS_MAX_TORQUE_POS_mm - APPS_MIN_TORQUE_POS_mm )
+
+#define APPS_1_MAX_CURRENT_POS_mm  20.0f // The position of the pedal at 100% torque
+#define APPS_1_MIN_CURRENT_POS_mm  4.0f  // The position of the pedal at 0% torque
+#define APPS_2_MAX_CURRENT_POS_mm  22.0f // The position of the pedal at 100% torque
+#define APPS_2_MIN_CURRENT_POS_mm  6.0f  // The position of the pedal at 0% torque
+#define APPS_MAX_ERROR_POS_mm 25.0f // position where the error begins
+#define APPS_MIN_ERROR_POS_mm .65f // position where the error begins
+#define APPS_1_TOTAL_TRAVEL_mm ( APPS_1_MAX_CURRENT_POS_mm - APPS_1_MIN_CURRENT_POS_mm )
+#define APPS_2_TOTAL_TRAVEL_mm ( APPS_2_MAX_CURRENT_POS_mm - APPS_2_MIN_CURRENT_POS_mm )
 // ==============================================================================================
 
 // ====================================== BRAKE PARAMETERS ======================================
@@ -63,12 +72,13 @@
 // This check is done using APPS1 (since APPS1 determines the applied torque) and the BSE
 #define APPS_BRAKE_PRESS_THRESH_psi  50.0f  // The minimum amount of brake pressure that will trip
 // The minimum APPS position that will trip the APPS/Brake check
-#define APPS_BRAKE_APPS1_THRESH_mm   ( APPS_TOTAL_TRAVEL_mm * 0.25 ) + APPS_MIN_TORQUE_POS_mm
+#define APPS_BRAKE_APPS1_THRESH_mm   ( APPS_1_TOTAL_TRAVEL_mm * 0.25 ) + APPS_1_MIN_CURRENT_POS_mm
 // The maximum APPS position that will reset the APPS/Brake check
-#define APPS_BRAKE_RESET_THRESH_mm   ( APPS_TOTAL_TRAVEL_mm * 0.05 ) + APPS_MIN_TORQUE_POS_mm
+#define APPS_BRAKE_RESET_APPS1_THRESH_mm   ( APPS_1_TOTAL_TRAVEL_mm * 0.05 ) + APPS_1_MIN_CURRENT_POS_mm
 
 // ------------------------------------ APPS Correlation Check ----------------------------------
-#define APPS_CORRELATION_THRESH_mm   ( APPS_TOTAL_TRAVEL_mm * 0.1 )
+//#define APPS_CORRELATION_THRESH_mm   ( APPS_TOTAL_TRAVEL_mm * 0.1 )
+#define APPS_CORRELATION_THRESH_mm   10
 #define CORRELATION_TRIP_DELAY_ms    85  // The amount of time it takes a correlation fault to take effect
 #define APPS_CORRELATION_OFFSET_mm   0.0  // The average offset of the APPSs, positive is APPS1 > APPS2
 
@@ -138,15 +148,11 @@
 #define INVERTER_DRIVE_ENABLE_CMD_ID         0x18E  // The CAN ID for Drive Enable Command
 #define INVERTER_MAX_CURRENT_AC_LIMIT_CMD_ID 0x10E  // The CAN ID for Setting Max Current Limit
 #define INVERTER_SET_CURRENT_AC_CMD_ID     	 0x02E  // The CAN ID for Setting Desired Inverter Current
-#define MAX_TEST_CMD_CURRENT_A    			 550  // The maximum current that will be commanded
+#define MAX_TEST_CMD_CURRENT_A    			 400  // The maximum current that will be commanded
 #define DRIVE_ENABLE_INVERTER_TIMEOUT		 200 //Inverter Timeout if
 #define VEHICLE_STOPPED_THRESHOLD			 1000 //If vehicle is stopped for 1 sec
+#define SLOW_MODE							 1 // If vehicle is in slow mode;
 
-#define APPS_MAX_CURRENT_POS_mm  20.0f // The position of the pedal at 100% torque
-#define APPS_MIN_CURRENT_POS_mm  10.0f  // The position of the pedal at 0% torque
-#define APPS_MAX_ERROR_POS_mm 24.0f // position where the error begins
-#define APPS_MIN_ERROR_POS_mm 1.0f // position where the error begins
-//#define APPS_TOTAL_TRAVEL_mm ( APPS_MAX_CURRENT_POS_mm - APPS_MIN_CURRENT_POS_mm )
 
 //#define USING_LAUNCH_CONTROL
 #define RPM_LAUNCH_CONTROL_THRESH			10
@@ -210,6 +216,7 @@ typedef enum {
 
 extern VEHICLE_STATE_t vehicle_state;
 
+
 void init(CAN_HandleTypeDef* hcan_ptr);
 void main_loop();
 void can_buffer_handling_loop();
@@ -228,4 +235,6 @@ void set_DRS_Servo_Position(U8 start_up_condition);
 void init_Pump(TIM_HandleTypeDef* timer_address, U32 channel);
 void launch_control_sm();
 boolean isVehicleMoving();
+void set_inv_disabled();
+int get_current_limit(boolean driving_mode);
 #endif /* INC_VCU_H_ */

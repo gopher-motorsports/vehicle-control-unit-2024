@@ -22,7 +22,7 @@ uint32_t preDriveTimer_ms = 0;
 
 float desiredCurrent_A = 0;
 float maxcurrentLimit_A = 0;
-
+float bspd_power_limit = 4000;
 //float desiredTorque_Nm = 0;
 float torqueLimit_Nm = 0;
 
@@ -33,9 +33,13 @@ boolean appsBrakeLatched_state = 0;
 boolean Current_Fault_3V3_state = 0;
 boolean Current_Fault_5V_state = 0;
 
+boolean current_driving_mode = 0;
 boolean readyToDriveButtonPressed_state = 0;
+boolean current_mode_button_state = 0;
+boolean past_mode_button_state = 0;
 
 VEHICLE_STATE_t vehicle_state = VEHICLE_NO_COMMS;
+U8 inverter_enable_state = INVERTER_DISABLE;
 boolean vehicle_currently_moving = 0;
 LAUNCH_CONTROL_STATES_t launch_control_state = LAUNCH_CONTROL_DISABLED;
 
@@ -54,13 +58,13 @@ boolean steady_temperatures_achieved_pump[] = {true, true}; //LOT if pump temper
 U8 pump_readings_below_HYS_threshold = 0;
 U16 pwm_pump_intensity = PUMP_INTENSITY_OFF;
 
-U8 digital_pump_state = 0; //if no pump pwm and just digital
+U8 digital_pump_state = PUMP_DIGITAL_OFF; //if no pump pwm and just digital
 
 
 
 #define HBEAT_LED_DELAY_TIME_ms 500
 #define RTD_DEBOUNCE_TIME_ms 25
-#define SET_INV_DISABLED() do{ desiredCurrent_A = 0; maxcurrentLimit_A = MAX_TEST_CMD_CURRENT_A; inverter_enable_state = INVERTER_DISABLE; } while(0)
+//#define SET_INV_DISABLED() do{ desiredCurrent_A = 0; maxcurrentLimit_A = MAX_TEST_CMD_CURRENT_A; inverter_enable_state = INVERTER_DISABLE; } while(0)
 
 // Initialization code goes here
 void init(CAN_HandleTypeDef* hcan_ptr) {
@@ -76,7 +80,7 @@ void main_loop() {
 	update_outputs();
 	update_cooling();
 	update_display_fault_status();
-	update_gcan_states(); // Should be after process_sensors
+	update_gcan_states(); // Should be after proceass_sensors
 	LED_task();
 	set_DRS_Servo_Position(FALSE);
 	vehicle_currently_moving = isVehicleMoving();
@@ -99,13 +103,13 @@ void can_buffer_handling_loop()
 
 void update_gcan_states() {
 	// Log pedal position percentages
-	float pedalPos1 = 100.0*(pedalPosition1_mm.data-APPS_MIN_TORQUE_POS_mm)/APPS_TOTAL_TRAVEL_mm;
+	float pedalPos1 = 100.0*(pedalPosition1_mm.data-APPS_1_MIN_CURRENT_POS_mm)/APPS_1_TOTAL_TRAVEL_mm;
 	if(pedalPos1 < 0) {
 		pedalPos1 = 0;
 	} else if (pedalPos1 > 100) {
 		pedalPos1 = 100;
 	}
-	float pedalPos2 = 100.0*(pedalPosition2_mm.data-APPS_MIN_TORQUE_POS_mm)/APPS_TOTAL_TRAVEL_mm;
+	float pedalPos2 = 100.0*(pedalPosition2_mm.data-APPS_2_MIN_CURRENT_POS_mm)/APPS_2_TOTAL_TRAVEL_mm;
 	if(pedalPos2 < 0) {
 		pedalPos2 = 0;
 	} else if (pedalPos2 > 100) {
@@ -135,12 +139,12 @@ void update_gcan_states() {
 	update_and_queue_param_float(&vcuCurrentRequested_A, desiredCurrent_A);
 	update_and_queue_param_float(&vcuMaxCurrentLimit_A, maxcurrentLimit_A );
 	// Cooling
-	update_and_queue_param_u8(&coolantFanPower_percent, rad_fan_state);
+	update_and_queue_param_u8(&coolantFanPower_percent, rad_fan_state*100);
 #ifdef USING_PUMP_PWM
 	update_and_queue_param_u8(&coolantPumpPower_percent, (pwm_pump_intensity/32000) * 100); //calculate duty cycle percent
 	digital_pump_state
 #else
-	update_and_queue_param_u8(&coolantPumpPower_percent, digital_pump_state); //digital pump state
+	update_and_queue_param_u8(&coolantPumpPower_percent, digital_pump_state*100); //digital pump state
 #endif
 	// Vehicle state
 	update_and_queue_param_u8(&vehicleState_state, vehicle_state);
@@ -251,6 +255,11 @@ void update_cooling() {
 }
 
 void process_sensors() {
+	current_mode_button_state = swButon2_state.data;
+	if(past_mode_button_state == 0 && current_mode_button_state == 1){
+		current_driving_mode = !current_driving_mode;
+	}
+	past_mode_button_state = current_mode_button_state;
 
 	// read in the RTD button. This is a software low pass to make sure noise does not press the button
 	static U32 new_event_time;
@@ -282,7 +291,7 @@ void process_sensors() {
 		}
 	}
 
-	maxcurrentLimit_A = MAX_TEST_CMD_CURRENT_A;
+	maxcurrentLimit_A = get_current_limit(current_driving_mode);
 
 
 	update_struct_fault_data(); //refresh sensor data
@@ -309,9 +318,15 @@ void process_sensors() {
 
 
 	// APPS/Braking Pedal Plausibility Check, edge case handled without struct
-	if(brakePressureFront_psi.data > APPS_BRAKE_PRESS_THRESH_psi && pedalPosition1_mm.data > APPS_BRAKE_APPS1_THRESH_mm) {
+	/*if(brakePressureFront_psi.data > APPS_BRAKE_PRESS_THRESH_psi && pedalPosition1_mm.data > APPS_BRAKE_APPS1_THRESH_mm) {
 		appsBrakeLatched_state = TRUE;
-	} else if (pedalPosition1_mm.data <= APPS_BRAKE_RESET_THRESH_mm) {
+	} else if (pedalPosition1_mm.data <= APPS_BRAKE_RESET_APPS1_THRESH_mm) {
+		appsBrakeLatched_state = FALSE;
+	}*/
+
+	if(brakePressureFront_psi.data > APPS_BRAKE_PRESS_THRESH_psi && pedalPosition1_percent.data > 25) {
+			appsBrakeLatched_state = TRUE;
+	} else if (pedalPosition1_percent.data <= 5) {
 		appsBrakeLatched_state = FALSE;
 	}
 
@@ -349,7 +364,7 @@ void process_sensors() {
 	if(bspdTractiveSystemBrakingFault_state.data) {
 		float tractiveSystemBrakingLimit_A = 0;
 		if(inputInverterVoltage_V.data != 0) {
-			tractiveSystemBrakingLimit_A = BSPD_POWER_LIMIT / inputInverterVoltage_V.data; //stay below 5 kW I = P/V
+			tractiveSystemBrakingLimit_A = bspd_power_limit / inputInverterVoltage_V.data; //stay below 5 kW I = P/V
 		}
 		// If the tractive system braking limit is less (more restrictive),
 		// then set the torque limit to that amount
@@ -361,14 +376,14 @@ void process_sensors() {
 		}
 	}
 
-	desiredCurrent_A = ((pedalPosition1_mm.data-APPS_MIN_CURRENT_POS_mm)/APPS_TOTAL_TRAVEL_mm) * MAX_TEST_CMD_CURRENT_A;
+	desiredCurrent_A = ((pedalPosition1_mm.data-APPS_1_MIN_CURRENT_POS_mm)/APPS_1_TOTAL_TRAVEL_mm) * get_current_limit(current_driving_mode);
 
-	if(pedalPosition1_mm.data < APPS_MIN_CURRENT_POS_mm) {
+	if(pedalPosition1_mm.data < APPS_1_MIN_CURRENT_POS_mm) {
 		desiredCurrent_A = 0;
 	}
 
-	if(desiredCurrent_A >  MAX_TEST_CMD_CURRENT_A) {
-		desiredCurrent_A =  MAX_TEST_CMD_CURRENT_A;
+	if(desiredCurrent_A > get_current_limit(current_driving_mode)) {
+		desiredCurrent_A =  get_current_limit(current_driving_mode);
 	}
 }
 
@@ -394,13 +409,14 @@ void update_display_fault_status() {
 
 	update_and_queue_param_u8(&displayFaultStatus_state, status);
 }
+U8 ts_volt_sim = 200;
 
 void process_inverter() {
 	U8 inverter_enable_state = INVERTER_DISABLE;
 
-	if(faultCode.data != 0x00) {
+	/*if(faultCode.data != 0x00) {
 		vehicle_state = VEHICLE_FAULT;
-	}
+	}*/
 
 	switch (vehicle_state)
 	{
@@ -410,7 +426,7 @@ void process_inverter() {
 		{
 			vehicle_state = VEHICLE_STANDBY;
 		}
-		SET_INV_DISABLED();
+		set_inv_disabled();
 		break;
 
 	case VEHICLE_FAULT:
@@ -418,7 +434,7 @@ void process_inverter() {
 		if(faultCode.data == 0x00) {
 			vehicle_state = VEHICLE_NO_COMMS;
 		}
-		SET_INV_DISABLED();
+		set_inv_disabled();
 		break;
 
 	case VEHICLE_STANDBY:
@@ -431,7 +447,7 @@ void process_inverter() {
 			vehicle_state = VEHICLE_PREDRIVE;
 			preDriveTimer_ms = 0;
 		}
-		SET_INV_DISABLED();
+		set_inv_disabled();
 		break;
 
 	case VEHICLE_PREDRIVE:
@@ -439,10 +455,13 @@ void process_inverter() {
 		if(++preDriveTimer_ms > PREDRIVE_TIME_ms) {
 			vehicle_state = VEHICLE_DRIVING;
 		}
-		SET_INV_DISABLED();
+		set_inv_disabled();
 		break;
 
 	case VEHICLE_DRIVING:
+		if(inputInverterVoltage_V.data < TS_ON_THRESHOLD_VOLTAGE_V){
+			vehicle_state = VEHICLE_NO_COMMS;
+		}
 		// vehcile in driving state
 #ifdef USING_LAUNCH_CONTROL
 		launch_control_sm();
@@ -452,7 +471,7 @@ void process_inverter() {
 
 	default:
 		vehicle_state = VEHICLE_NO_COMMS;
-		SET_INV_DISABLED();
+		set_inv_disabled();
 		break;
 	}
 
@@ -545,6 +564,19 @@ void LED_task(){
 	HAL_GPIO_WritePin(STATUS_R_GPIO_Port, STATUS_R_Pin, SET);
 	HAL_GPIO_WritePin(STATUS_G_GPIO_Port, STATUS_G_Pin, SET);
 	HAL_GPIO_WritePin(STATUS_B_GPIO_Port, STATUS_B_Pin, SET);
+}
+
+void set_inv_disabled(){
+	desiredCurrent_A = 0;
+	maxcurrentLimit_A = get_current_limit(current_driving_mode);
+	inverter_enable_state = INVERTER_DISABLE;
+}
+
+int get_current_limit(boolean driving_mode){
+	if(driving_mode == SLOW_MODE)
+		return 10; // 10 A
+	else
+		return 400; // 400 A
 }
 
 // End of vcu.c

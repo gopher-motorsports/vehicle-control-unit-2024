@@ -80,5 +80,5 @@ void update_struct_fault_data(){
 	APPS2_Range_Fault.data = pedalPosition2_mm.data;
 	BRK_PRESSURE_Range_Fault.data = brakePressureFront_psi.data;
 	TS_CURRENT_Range_Fault.data = vcuTractiveSystemCurrent_A.data;
-	Pedal_Correlation_Fault.data = fabsf(pedalPosition1_mm.data - pedalPosition2_mm.data);
+	Pedal_Correlation_Fault.data = fabsf(pedalPosition1_percent.data - pedalPosition2_percent.data);
 }
