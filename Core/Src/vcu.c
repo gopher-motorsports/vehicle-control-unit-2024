@@ -226,6 +226,7 @@ void update_cooling() {
 
 	__HAL_TIM_SET_COMPARE(PUMP_PWM_Timer, PUMP_Channel, pwm_pump_intensity);
 #else
+	/*
 	for(int i = 0; i < total_cooling_thresholds; i++){
 			if(digital_pump_state == PUMP_DIGITAL_OFF && (temp_readings[i] >= (cooling_thresholds[i] + HYSTERESIS_DIGITAL))){
 				digital_pump_state = PUMP_DIGITAL_ON;
@@ -248,8 +249,8 @@ void update_cooling() {
 					digital_pump_state = PUMP_DIGITAL_OFF;
 			}
 		}
-
-		HAL_GPIO_WritePin(PUMP_OUTPUT_GPIO_Port, PUMP_OUTPUT_Pin, digital_pump_state);
+*/
+		HAL_GPIO_WritePin(PUMP_OUTPUT_GPIO_Port, PUMP_OUTPUT_Pin, 0);
 #endif
 
 }
@@ -574,7 +575,7 @@ void set_inv_disabled(){
 
 int get_current_limit(boolean driving_mode){
 	if(driving_mode == SLOW_MODE)
-		return 10; // 10 A
+		return 400; // 10 A
 	else
 		return 400; // 400 A
 }

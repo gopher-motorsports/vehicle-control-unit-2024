@@ -34,11 +34,11 @@
 //#define APPS_MIN_ERROR_POS_mm 1.0f // position where the error begins
 //#define APPS_TOTAL_TRAVEL_mm ( APPS_MAX_TORQUE_POS_mm - APPS_MIN_TORQUE_POS_mm )
 
-#define APPS_1_MAX_CURRENT_POS_mm  20.0f // The position of the pedal at 100% torque
-#define APPS_1_MIN_CURRENT_POS_mm  4.0f  // The position of the pedal at 0% torque
+#define APPS_1_MAX_CURRENT_POS_mm  21.5f // The position of the pedal at 100% torque
+#define APPS_1_MIN_CURRENT_POS_mm  5.0f  // The position of the pedal at 0% torque
 #define APPS_2_MAX_CURRENT_POS_mm  22.0f // The position of the pedal at 100% torque
-#define APPS_2_MIN_CURRENT_POS_mm  6.0f  // The position of the pedal at 0% torque
-#define APPS_MAX_ERROR_POS_mm 25.0f // position where the error begins
+#define APPS_2_MIN_CURRENT_POS_mm  5.5f  // The position of the pedal at 0% torque
+#define APPS_MAX_ERROR_POS_mm 25.1f // position where the error begins, check back on this
 #define APPS_MIN_ERROR_POS_mm .65f // position where the error begins
 #define APPS_1_TOTAL_TRAVEL_mm ( APPS_1_MAX_CURRENT_POS_mm - APPS_1_MIN_CURRENT_POS_mm )
 #define APPS_2_TOTAL_TRAVEL_mm ( APPS_2_MAX_CURRENT_POS_mm - APPS_2_MIN_CURRENT_POS_mm )
@@ -56,11 +56,11 @@
 // =============================================================================================
 
 // ================================== READY TO DRIVE PARAMETERS =================================
-#define PREDRIVE_BRAKE_THRESH_psi  100  // The minimum brake pressure to enter the driving state
+#define PREDRIVE_BRAKE_THRESH_psi  10  // The minimum brake pressure to enter the driving state
 #define PREDRIVE_BUTTON_PRESSED    1    // The value of the button parameter when pressed
 #define PREDRIVE_TIME_ms           2000 // The length of predrive in ms
 #define RTD_BUTTON_PUSHED          (GPIO_PIN_RESET)
-#define TS_ON_THRESHOLD_VOLTAGE_V  190.0
+#define TS_ON_THRESHOLD_VOLTAGE_V  190
 // ==============================================================================================
 
 
