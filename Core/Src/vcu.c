@@ -248,9 +248,13 @@ void update_cooling() {
 				if(pump_readings_below_HYS_threshold == total_cooling_thresholds)
 					digital_pump_state = PUMP_DIGITAL_OFF;
 			}
-		}
-*/
-		HAL_GPIO_WritePin(PUMP_OUTPUT_GPIO_Port, PUMP_OUTPUT_Pin, 0);
+		}*/
+
+		//HAL_GPIO_WritePin(PUMP_OUTPUT_GPIO_Port, PUMP_OUTPUT_Pin, 0);
+	if(motor_rpm < 50)
+		HAL_GPIO_WritePin(PUMP_OUTPUT_GPIO_Port, PUMP_OUTPUT_Pin, PUMP_DIGITAL_OFF);
+	else
+		HAL_GPIO_WritePin(PUMP_OUTPUT_GPIO_Port, PUMP_OUTPUT_Pin, PUMP_DIGITAL_ON);
 #endif
 
 }
