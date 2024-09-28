@@ -68,13 +68,13 @@ bool drs_shutoff_conditions_reached(){
 	current_tick = HAL_GetTick();
 
 	//if you haven't received brake or steering angle data in .2 seconds don't close drs
-	if(current_tick - brakePressureFront_psi.info.last_rx < CAN_VALUE_TRUST_THRESHOLD ||
-	   current_tick - brakePressureRear_psi.info.last_rx  < CAN_VALUE_TRUST_THRESHOLD){
-	   if(brakePressureFront_psi.data > BRAKE_SHUTOFF_THRESHOLD ||
-	   	   brakePressureRear_psi.data > BRAKE_SHUTOFF_THRESHOLD){
-	   		return true;
-	   	}
-	}
+//	if(current_tick - brakePressureFront_psi.info.last_rx < CAN_VALUE_TRUST_THRESHOLD){// ||
+////	   current_tick - brakePressureRear_psi.info.last_rx  < CAN_VALUE_TRUST_THRESHOLD){
+//	   if(brakePressureFront_psi.data > BRAKE_SHUTOFF_THRESHOLD){// ||
+////	   	   brakePressureRear_psi.data > BRAKE_SHUTOFF_THRESHOLD){
+//	   		return true;
+//	   	}
+//	}
 /*
 	if(current_tick - steeringAngle_deg.info.last_rx < CAN_VALUE_TRUST_THRESHOLD){
 		switch (drs_steering_angle_limit_state)

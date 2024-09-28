@@ -32,7 +32,7 @@ buckets:
                 samples_buffered: 1
             
     low_frequency_vcu:
-        frequency_hz: 100
+        frequency_hz: 10
         parameters:
             coolantPumpPressure_psi:
                 ADC: ADC1_IN7
@@ -128,6 +128,10 @@ buckets:
                 sensor: NON_ADC
                 samples_buffered: 1
             
+
+    low_frequency_vcu_but_faster:
+        frequency_hz: 100
+        parameters:
             readyToDriveButton_state:
                 ADC: NON_ADC
                 sensor: NON_ADC

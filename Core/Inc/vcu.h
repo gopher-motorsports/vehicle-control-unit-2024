@@ -148,7 +148,7 @@
 #define INVERTER_DRIVE_ENABLE_CMD_ID         0x18E  // The CAN ID for Drive Enable Command
 #define INVERTER_MAX_CURRENT_AC_LIMIT_CMD_ID 0x10E  // The CAN ID for Setting Max Current Limit
 #define INVERTER_SET_CURRENT_AC_CMD_ID     	 0x02E  // The CAN ID for Setting Desired Inverter Current
-#define MAX_TEST_CMD_CURRENT_A    			 400  // The maximum current that will be commanded
+#define MAX_TEST_CMD_CURRENT_A    			 550  // The maximum current that will be commanded
 #define DRIVE_ENABLE_INVERTER_TIMEOUT		 200 //Inverter Timeout if
 #define VEHICLE_STOPPED_THRESHOLD			 1000 //If vehicle is stopped for 1 sec
 #define SLOW_MODE							 1 // If vehicle is in slow mode;

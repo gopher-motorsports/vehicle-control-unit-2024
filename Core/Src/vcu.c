@@ -575,9 +575,9 @@ void set_inv_disabled(){
 
 int get_current_limit(boolean driving_mode){
 	if(driving_mode == SLOW_MODE)
-		return 400; // 10 A
+		return 550; // 10 A
 	else
-		return 400; // 400 A
+		return 550; // 400 A
 }
 
 // End of vcu.c
