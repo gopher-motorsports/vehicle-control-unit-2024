@@ -45,7 +45,7 @@
 // ==============================================================================================
 
 // ====================================== BRAKE PARAMETERS ======================================
-#define BRAKE_PRESS_MIN_psi    -50   // The minimum value of the brake pressure sensor
+#define BRAKE_PRESS_MIN_psi    -300   // The minimum value of the brake pressure sensor
 #define BRAKE_PRESS_MAX_psi    2050  // The maximum value of the brake pressure sensor
 #define BRAKE_LIGHT_THRESH_psi 25 // The pressure at which the brake light will be activated
 // ==============================================================================================
@@ -70,7 +70,7 @@
 
 // -------------------------------------- APPS/Brake Check --------------------------------------
 // This check is done using APPS1 (since APPS1 determines the applied torque) and the BSE
-#define APPS_BRAKE_PRESS_THRESH_psi  50.0f  // The minimum amount of brake pressure that will trip
+#define APPS_BRAKE_PRESS_THRESH_psi  100.0f  // The minimum amount of brake pressure that will trip
 // The minimum APPS position that will trip the APPS/Brake check
 #define APPS_BRAKE_APPS1_THRESH_mm   ( APPS_1_TOTAL_TRAVEL_mm * 0.25 ) + APPS_1_MIN_CURRENT_POS_mm
 // The maximum APPS position that will reset the APPS/Brake check
