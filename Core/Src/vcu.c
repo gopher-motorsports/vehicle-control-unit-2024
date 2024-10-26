@@ -170,8 +170,8 @@ void init_Pump(TIM_HandleTypeDef* timer_address, U32 channel){
 
 void update_cooling() {
 
-    //double temp_readings[] = {ControllerTemp_C.data, motorTemp_C.data};
-	double temp_readings[] = {TEST_TEMP_INVERTER, TEST_TEMP_MOTOR};
+    double temp_readings[] = {ControllerTemp_C.data, motorTemp_C.data};
+	//double temp_readings[] = {TEST_TEMP_INVERTER, TEST_TEMP_MOTOR};
 	static double cooling_thresholds[] = {INVERTER_TEMP_THRESH_C, MOTOR_TEMP_THRESH_C};
 	static int total_cooling_thresholds = sizeof(cooling_thresholds) / sizeof(cooling_thresholds[0]); //amount of cooling thresholds
 
