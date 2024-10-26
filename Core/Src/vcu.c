@@ -45,6 +45,11 @@ LAUNCH_CONTROL_STATES_t launch_control_state = LAUNCH_CONTROL_DISABLED;
 
 //Cooling variables
 
+// Test Temps
+float TEST_TEMP_INVERTER = 27.0;
+float TEST_TEMP_MOTOR = 27.0;
+float test_rpm = 0;
+
 //Fan
 boolean steady_temperatures_achieved_fan[] = {true, true}; //LOT if fan temperatures have returned to steady state, implemented to stop double counting
 U8 fan_readings_below_HYS_threshold = 0;
@@ -165,7 +170,8 @@ void init_Pump(TIM_HandleTypeDef* timer_address, U32 channel){
 
 void update_cooling() {
 
-    double temp_readings[] = {ControllerTemp_C.data, motorTemp_C.data};
+    //double temp_readings[] = {ControllerTemp_C.data, motorTemp_C.data};
+	double temp_readings[] = {TEST_TEMP_INVERTER, TEST_TEMP_MOTOR};
 	static double cooling_thresholds[] = {INVERTER_TEMP_THRESH_C, MOTOR_TEMP_THRESH_C};
 	static int total_cooling_thresholds = sizeof(cooling_thresholds) / sizeof(cooling_thresholds[0]); //amount of cooling thresholds
 
@@ -194,10 +200,10 @@ void update_cooling() {
 		}
 	}
 
-	HAL_GPIO_WritePin(RAD_FAN_GPIO_Port, RAD_FAN_Pin, rad_fan_state);
+	HAL_GPIO_WritePin(RAD_FAN_GPIO_Port, RAD_FAN_Pin, !(rad_fan_state));
 
 	//pump cooling
-#ifdef USING_PUMP_PWM
+/*#ifdef USING_PUMP_PWM
 	for(int i = 0; i < total_cooling_thresholds; i++){
 		if(pwm_pump_intensity == PUMP_INTENSITY_OFF && (temp_readings[i] >= (cooling_thresholds[i] + HYSTERESIS_ANALOG))){
 			pwm_pump_intensity = PUMP_INTENSITY_1;
@@ -226,7 +232,7 @@ void update_cooling() {
 
 	__HAL_TIM_SET_COMPARE(PUMP_PWM_Timer, PUMP_Channel, pwm_pump_intensity);
 #else
-	/*
+*/
 	for(int i = 0; i < total_cooling_thresholds; i++){
 			if(digital_pump_state == PUMP_DIGITAL_OFF && (temp_readings[i] >= (cooling_thresholds[i] + HYSTERESIS_DIGITAL))){
 				digital_pump_state = PUMP_DIGITAL_ON;
@@ -248,14 +254,15 @@ void update_cooling() {
 				if(pump_readings_below_HYS_threshold == total_cooling_thresholds)
 					digital_pump_state = PUMP_DIGITAL_OFF;
 			}
-		}*/
-
+		}
+	HAL_GPIO_WritePin(PUMP_OUTPUT_GPIO_Port, PUMP_OUTPUT_Pin, digital_pump_state);
 		//HAL_GPIO_WritePin(PUMP_OUTPUT_GPIO_Port, PUMP_OUTPUT_Pin, 0);
-	if(motor_rpm < 50)
-		HAL_GPIO_WritePin(PUMP_OUTPUT_GPIO_Port, PUMP_OUTPUT_Pin, PUMP_DIGITAL_OFF);
-	else
-		HAL_GPIO_WritePin(PUMP_OUTPUT_GPIO_Port, PUMP_OUTPUT_Pin, PUMP_DIGITAL_ON);
-#endif
+//	if(motor_rpm < 50)
+//	if(test_rpm < 50)
+//		HAL_GPIO_WritePin(PUMP_OUTPUT_GPIO_Port, PUMP_OUTPUT_Pin, PUMP_DIGITAL_OFF);
+//	else
+//		HAL_GPIO_WritePin(PUMP_OUTPUT_GPIO_Port, PUMP_OUTPUT_Pin, PUMP_DIGITAL_ON);
+//#endif
 
 }
 
