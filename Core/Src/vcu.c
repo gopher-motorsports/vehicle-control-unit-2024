@@ -336,16 +336,17 @@ void process_sensors() {
 		appsBrakeLatched_state = FALSE;
 	}*/
 
-	if(brakePressureFront_psi.data > APPS_BRAKE_PRESS_THRESH_psi && pedalPosition1_percent.data > 25) {
-			appsBrakeLatched_state = TRUE;
-	} else if (pedalPosition1_percent.data <= 5) {
-		appsBrakeLatched_state = FALSE;
-	}
+	if(!BYPASS_ACTIVE){
+		if(brakePressureFront_psi.data > APPS_BRAKE_PRESS_THRESH_psi && pedalPosition1_percent.data > 25) {
+				appsBrakeLatched_state = TRUE;
+		} else if (pedalPosition1_percent.data <= 5) {
+			appsBrakeLatched_state = FALSE;
+		}
 
-	if(appsBrakeLatched_state) {
-		maxcurrentLimit_A = 0;
+		if(appsBrakeLatched_state) {
+			maxcurrentLimit_A = 0;
+		}
 	}
-
 	//Sensor overcurrent Logic, turn off power to inverter if any of the sensor power lines are overcurrenting
 #ifdef USING_SOFTWARE_OVERCURRENT_PROT
 	Current_Fault_3V3_state = HAL_GPIO_ReadPin(CURR_FAULT_3V3_GPIO_Port, CURR_FAULT_3V3_Pin) == SENSOR_OVERCURRENT_TRIPPED; //active low
@@ -373,21 +374,22 @@ void process_sensors() {
 	}
 #endif
 	// TODO make some hysteresis on this in order to make it less jumpy
-	if(bspdTractiveSystemBrakingFault_state.data) {
-		float tractiveSystemBrakingLimit_A = 0;
-		if(inputInverterVoltage_V.data != 0) {
-			tractiveSystemBrakingLimit_A = bspd_power_limit / inputInverterVoltage_V.data; //stay below 5 kW I = P/V
-		}
-		// If the tractive system braking limit is less (more restrictive),
-		// then set the torque limit to that amount
-		if(tractiveSystemBrakingLimit_A < maxcurrentLimit_A) {
-			update_and_queue_param_u8(&vcuBrakingClampingCurrent_state, TRUE);
-			maxcurrentLimit_A = tractiveSystemBrakingLimit_A;
-		} else {
-			update_and_queue_param_u8(&vcuBrakingClampingCurrent_state, FALSE);
+	if(!BYPASS_ACTIVE){
+		if(bspdTractiveSystemBrakingFault_state.data) {
+			float tractiveSystemBrakingLimit_A = 0;
+			if(inputInverterVoltage_V.data != 0) {
+				tractiveSystemBrakingLimit_A = bspd_power_limit / inputInverterVoltage_V.data; //stay below 5 kW I = P/V
+			}
+			// If the tractive system braking limit is less (more restrictive),
+			// then set the torque limit to that amount
+			if(tractiveSystemBrakingLimit_A < maxcurrentLimit_A) {
+				update_and_queue_param_u8(&vcuBrakingClampingCurrent_state, TRUE);
+				maxcurrentLimit_A = tractiveSystemBrakingLimit_A;
+			} else {
+				update_and_queue_param_u8(&vcuBrakingClampingCurrent_state, FALSE);
+			}
 		}
 	}
-
 	desiredCurrent_A = ((pedalPosition1_mm.data-APPS_1_MIN_CURRENT_POS_mm)/APPS_1_TOTAL_TRAVEL_mm) * get_current_limit(current_driving_mode);
 
 	if(pedalPosition1_mm.data < APPS_1_MIN_CURRENT_POS_mm) {
@@ -407,16 +409,16 @@ void update_display_fault_status() {
 	else if (vehicle_state == VEHICLE_FAULT) status = INVERTER_FAULT;
 	else if(bmsNumActiveAlerts_state.data) status = BMS_FAULT;
 	else if(vcuPedalPositionBrakingFault_state.data) status = RELEASE_PEDAL;
-	else if(bspdTractiveSystemBrakingFault_state.data || vcuBrakingClampingCurrent_state.data) status = BRAKING_FAULT;
+	else if((bspdTractiveSystemBrakingFault_state.data || vcuBrakingClampingCurrent_state.data) && (!BYPASS_ACTIVE)) status = BRAKING_FAULT;
 	else if(vcuPedalPositionCorrelationFault_state.data) status = APPS_FAULT;
-	else if(bspdFault_state.data
+	else if((bspdFault_state.data
 			|| bspdBrakePressureSensorFault_state.data
-			|| bspdTractiveSystemCurrentSensorFault_state.data
-			) status = BSPD_FAULT;
-	else if(vcuBrakePressureSensorFault_state.data
+			|| bspdTractiveSystemCurrentSensorFault_state.data)
+			&& (!BYPASS_ACTIVE)) status = BSPD_FAULT;
+	else if((vcuBrakePressureSensorFault_state.data
 			|| vcuPedalPosition1Fault_state.data
 			|| vcuPedalPosition2Fault_state.data
-			|| vcuTractiveSystemCurrentSensorFault_state.data
+			|| vcuTractiveSystemCurrentSensorFault_state.data) && (!BYPASS_ACTIVE)
 			) status = VCU_FAULT;
 
 	update_and_queue_param_u8(&displayFaultStatus_state, status);

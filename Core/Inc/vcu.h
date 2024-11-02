@@ -176,6 +176,18 @@
 #define BSPD_TS_SNS_FAULT    GPIO_PIN_RESET
 #define BSPD_TS_BRK_FAULT    GPIO_PIN_SET
 // ==============================================================================================
+#define BYPASS_ACTIVE		TRUE
+#define BYPASS_MAX FLT_MAX
+#define BYPASS_MIN -FLT_MIN
+// ======================================= BYPASS PARAMETERS ======================================
+// Allows us to disable a particular fault
+#define BSPD_APPS1_FAULT     GPIO_PIN_RESET
+#define BSPD_APPS2_FAULT     GPIO_PIN_RESET
+#define BSPD_BRAKE_FAULT     GPIO_PIN_RESET
+#define BSPD_TS_SNS_FAULT    GPIO_PIN_RESET
+#define BSPD_TS_BRK_FAULT    GPIO_PIN_SET
+// ==============================================================================================
+
 
 // =================== THROTTLE CALCULATION ===================
 // Throttle is calculated using APPS1 with APPS2 being used

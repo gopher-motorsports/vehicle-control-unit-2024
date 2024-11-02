@@ -40,8 +40,10 @@ SOFTWARE_FAULT APPS2_Range_Fault = {
 //Brake Pressure Sensor Out of Range Check
 SOFTWARE_FAULT BRK_PRESSURE_Range_Fault = {
     .data = 0,
-	.max_threshold = BRAKE_PRESS_MAX_psi,
-	.min_threshold = BRAKE_PRESS_MIN_psi,
+	//.max_threshold = BRAKE_PRESS_MAX_psi,
+	//.min_threshold = BRAKE_PRESS_MIN_psi,
+	.max_threshold = BYPASS_MAX,
+	.min_threshold = BYPASS_MIN,
 	.fault_timer = 0,
 	.input_delay_threshold = INPUT_TRIP_DELAY_ms,
 	.state = false
@@ -50,8 +52,10 @@ SOFTWARE_FAULT BRK_PRESSURE_Range_Fault = {
 //Tractive System Current Sensor Out of Range Check
 SOFTWARE_FAULT TS_CURRENT_Range_Fault = {
     .data = 0,
-	.max_threshold = TS_CURRENT_MAX_A,
-	.min_threshold = TS_CURRENT_MIN_A,
+//	.max_threshold = TS_CURRENT_MAX_A,
+//	.min_threshold = TS_CURRENT_MIN_A,
+	.max_threshold = BYPASS_MAX,
+	.min_threshold = BYPASS_MIN,
 	.fault_timer = 0,
 	.input_delay_threshold = INPUT_TRIP_DELAY_ms,
 	.state = false
