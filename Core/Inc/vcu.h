@@ -48,6 +48,7 @@
 #define BRAKE_PRESS_MIN_psi    -300   // The minimum value of the brake pressure sensor
 #define BRAKE_PRESS_MAX_psi    2050  // The maximum value of the brake pressure sensor
 #define BRAKE_LIGHT_THRESH_psi 25 // The pressure at which the brake light will be activated
+#define BRAKE_BIAS_PRESS_THRESH_psi 100 // The pressure required to update the brake bias value
 // ==============================================================================================
 // ============================= TRACTIVE SYSTEM CURRENT PARAMETERS =============================
 #define TS_CURRENT_MIN_A   -85   // The minimum value of the current sensor
