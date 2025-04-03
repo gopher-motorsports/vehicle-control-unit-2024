@@ -120,25 +120,8 @@ void update_gcan_states() {
 	} else if (pedalPos2 > 100) {
 		pedalPos2 = 100;
 	}
-	update_and_queue_param_float(&pedalPosition1_percent, pedalPos1);
+	update_and_queue_param_float(&pedalPosition1_percent, 50.3);
 	update_and_queue_param_float(&pedalPosition2_percent, pedalPos2);
-	// Log BSPD out of range sensor faults
-	update_and_queue_param_u8(&bspdBrakePressureSensorFault_state,
-			HAL_GPIO_ReadPin(BSPD_BRK_FAULT_GPIO_Port, BSPD_BRK_FAULT_Pin) == BSPD_BRAKE_FAULT);
-	update_and_queue_param_u8(&bspdTractiveSystemCurrentSensorFault_state,
-			HAL_GPIO_ReadPin(BSPD_TS_SNS_FAULT_GPIO_Port, BSPD_TS_SNS_FAULT_Pin) == BSPD_TS_SNS_FAULT);
-	// Log BSPD current/braking fault
-	update_and_queue_param_u8(&bspdTractiveSystemBrakingFault_state,
-			HAL_GPIO_ReadPin(BSPD_TS_BRK_FAULT_GPIO_Port, BSPD_TS_BRK_FAULT_Pin) == BSPD_TS_BRK_FAULT);
-
-	// VCU software sensors faults, out of range checks
-	update_and_queue_param_u8(&vcuPedalPosition1Fault_state, TIMED_SOFTWARE_FAULTS[0]->state);
-	update_and_queue_param_u8(&vcuPedalPosition2Fault_state, TIMED_SOFTWARE_FAULTS[1]->state);
-	update_and_queue_param_u8(&vcuBrakePressureSensorFault_state, TIMED_SOFTWARE_FAULTS[2]->state);
-	update_and_queue_param_u8(&vcuTractiveSystemCurrentSensorFault_state, TIMED_SOFTWARE_FAULTS[3]->state);
-	// VCU software safety checks, correlation and APPS/Brake Plausibility check
-	update_and_queue_param_u8(&vcuPedalPositionCorrelationFault_state, TIMED_SOFTWARE_FAULTS[4]->state);
-	update_and_queue_param_u8(&vcuPedalPositionBrakingFault_state, appsBrakeLatched_state);
 
 	//current requested amps and max amps for DTI Inverter
 	update_and_queue_param_float(&vcuCurrentRequested_A, desiredCurrent_A);
@@ -200,8 +183,6 @@ void update_cooling() {
 		}
 	}
 
-	HAL_GPIO_WritePin(RAD_FAN_GPIO_Port, RAD_FAN_Pin, !(rad_fan_state));
-
 	//pump cooling
 /*#ifdef USING_PUMP_PWM
 	for(int i = 0; i < total_cooling_thresholds; i++){
@@ -255,7 +236,7 @@ void update_cooling() {
 					digital_pump_state = PUMP_DIGITAL_OFF;
 			}
 		}
-	HAL_GPIO_WritePin(PUMP_OUTPUT_GPIO_Port, PUMP_OUTPUT_Pin, digital_pump_state);
+	//HAL_GPIO_WritePin(PUMP_OUTPUT_GPIO_Port, PUMP_OUTPUT_Pin, digital_pump_state);
 		//HAL_GPIO_WritePin(PUMP_OUTPUT_GPIO_Port, PUMP_OUTPUT_Pin, 0);
 //	if(motor_rpm < 50)
 //	if(test_rpm < 50)
@@ -550,18 +531,18 @@ void launch_control_sm(){
 
 void update_outputs() {
 	if(vehicle_state == VEHICLE_PREDRIVE) {
-		HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, MOSFET_PULL_DOWN_ON);
+		//HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, MOSFET_PULL_DOWN_ON);
 		update_and_queue_param_u8(&vehicleBuzzerOn_state, TRUE);
 	} else {
-		HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, MOSFET_PULL_DOWN_OFF);
+		//HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, MOSFET_PULL_DOWN_OFF);
 		update_and_queue_param_u8(&vehicleBuzzerOn_state, FALSE);
 	}
 
 	if(brakePressureFront_psi.data > BRAKE_LIGHT_THRESH_psi) {
-		HAL_GPIO_WritePin(BRK_LT_GPIO_Port, BRK_LT_Pin, MOSFET_PULL_DOWN_ON);
+		//HAL_GPIO_WritePin(BRK_LT_GPIO_Port, BRK_LT_Pin, MOSFET_PULL_DOWN_ON);
 		update_and_queue_param_u8(&brakeLightOn_state, TRUE);
 	} else {
-		HAL_GPIO_WritePin(BRK_LT_GPIO_Port, BRK_LT_Pin, MOSFET_PULL_DOWN_OFF);
+		//HAL_GPIO_WritePin(BRK_LT_GPIO_Port, BRK_LT_Pin, MOSFET_PULL_DOWN_OFF);
 		update_and_queue_param_u8(&brakeLightOn_state, FALSE);
 	}
 	return;
@@ -575,9 +556,9 @@ void LED_task(){
 	}
 
 	// Turn off RGB
-	HAL_GPIO_WritePin(STATUS_R_GPIO_Port, STATUS_R_Pin, SET);
-	HAL_GPIO_WritePin(STATUS_G_GPIO_Port, STATUS_G_Pin, SET);
-	HAL_GPIO_WritePin(STATUS_B_GPIO_Port, STATUS_B_Pin, SET);
+	//HAL_GPIO_WritePin(STATUS_R_GPIO_Port, STATUS_R_Pin, SET);
+	//HAL_GPIO_WritePin(STATUS_G_GPIO_Port, STATUS_G_Pin, SET);
+	//HAL_GPIO_WritePin(STATUS_B_GPIO_Port, STATUS_B_Pin, SET);
 }
 
 void set_inv_disabled(){
