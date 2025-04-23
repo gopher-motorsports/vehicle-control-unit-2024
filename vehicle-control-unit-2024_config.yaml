@@ -109,7 +109,10 @@ buckets:
                 ADC: NON_ADC
                 sensor: NON_ADC
                 samples_buffered: 1
-
+            brakeBias_amount:
+                ADC: NON_ADC
+                sensor: NON_ADC
+                samples_buffered: 1
             switch1On_state:
                 ADC: NON_ADC
                 sensor: NON_ADC

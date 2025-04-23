@@ -79,7 +79,6 @@ void init(CAN_HandleTypeDef* hcan_ptr) {
 }
 
 void main_loop() {
-
 	process_sensors();
 	process_inverter();
 	update_outputs();
@@ -87,6 +86,7 @@ void main_loop() {
 	update_display_fault_status();
 	update_gcan_states(); // Should be after proceass_sensors
 	LED_task();
+	update_brakeBias();
 	set_DRS_Servo_Position(FALSE);
 	vehicle_currently_moving = isVehicleMoving();
 }
@@ -585,7 +585,12 @@ void set_inv_disabled(){
 	maxcurrentLimit_A = get_current_limit(current_driving_mode);
 	inverter_enable_state = INVERTER_DISABLE;
 }
-
+void update_brakeBias(){
+	if (brakePressureFront_psi.data > BRAKE_BIAS_PRESS_THRESH_psi && brakePressureRear_psi.data > BRAKE_BIAS_PRESS_THRESH_psi){
+		float bias = ((6.365*brakePressureFront_psi.data)/(6.365*brakePressureFront_psi.data + 3.125* brakePressureRear_psi.data))*100;
+		update_and_queue_param_float(&brakeBias_amount, bias);
+	}
+}
 int get_current_limit(boolean driving_mode){
 	if(driving_mode == SLOW_MODE)
 		return 550; // 10 A
