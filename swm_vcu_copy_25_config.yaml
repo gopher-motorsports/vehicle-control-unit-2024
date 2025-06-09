@@ -1,0 +1,41 @@
+module_name: "vcu"
+
+# NOTE: Frequencies will be converted to an integer number of ms for a delay
+
+buckets:
+    high_frequency_vcu:
+        frequency_hz: 250
+        parameters:
+            swButon0_state:
+              ADC: NON_ADC
+              sensor: NON_ADC
+              samples_buffered: 1
+            swButon1_state:
+              ADC: NON_ADC
+              sensor: NON_ADC
+              samples_buffered: 1
+            swButon2_state:
+              ADC: NON_ADC
+              sensor: NON_ADC
+              samples_buffered: 1
+            swButon3_state:
+              ADC: NON_ADC
+              sensor: NON_ADC
+              samples_buffered: 1
+            swButon4_state:
+              ADC: NON_ADC
+              sensor: NON_ADC
+              samples_buffered: 1
+            swButon5_state:
+              ADC: NON_ADC
+              sensor: NON_ADC
+              samples_buffered: 1
+            swDial_a_ul:
+              ADC: NON_ADC
+              sensor: NON_ADC
+              samples_buffered: 1
+            swDial_b_ul:
+              ADC: NON_ADC
+              sensor: NON_ADC
+              samples_buffered: 1
+            
